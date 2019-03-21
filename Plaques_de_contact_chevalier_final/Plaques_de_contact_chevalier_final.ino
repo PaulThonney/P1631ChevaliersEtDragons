@@ -1,4 +1,3 @@
-//yolo
 // Code de l'Arduino Nano gérant les plaques de contacts du chevalier, quasi identique à celui de 2017 donc dsl s'il manque des commentaires mais j'ai pas eu le temps de comprendre leur prog
 // Dany VALADO
 // 01.07.2017
