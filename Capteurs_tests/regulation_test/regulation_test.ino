@@ -1,9 +1,9 @@
-#define Kp 2
-#define Ki 2
-#define Kd 1
+#define Kp 0.02d
+#define Ki 0.002d
+#define Kd 0.01d
 #define R 0.02d
 #define HOLE_NBR 50
-#define ARRAY_SIZE 5
+#define ARRAY_SIZE 2
 byte oldpulse1 = 0; // détection de flan
 double pps[ARRAY_SIZE]; //pulse par secondes
 double tps[ARRAY_SIZE]; // tours par secondes
@@ -27,7 +27,7 @@ void setup() {
 void loop() {
 
   pot = analogRead(0);
-  desiredSpeed =   map(pot, 0, 1023, 0, 6);
+  desiredSpeed =   map(pot, 0, 1023, 0, 8);
  /* Serial.print("desiredSpeed ");
   Serial.println(desiredSpeed); //*/
 
@@ -35,7 +35,8 @@ void loop() {
   for (byte j = 0; j < ARRAY_SIZE; j++) {
 
     byte yolo = 0;
-  
+    
+  // détection de 2 pulses pour faire le calcul de vitesse intantanée (doit encore être modifié car bloquant)
     while (yolo < 2 ) {
 
       byte pulse1 = digitalRead(2);
@@ -73,21 +74,21 @@ void loop() {
   }
   avgSpeed = Sumspeed / ARRAY_SIZE;
   Sumspeed = 0;
-  microsNow = micros();
-  error = (desiredSpeed - avgSpeed)/desiredSpeed;
-
-  integral = integral + error * (microsNow-microsPrev);
-  derivative = (error - previous_error) / (microsNow-microsPrev);
-  calculatedPWM = constrain((Kp*error+Ki*integral+Kd*derivative)*255, 0, 255);
+  
+  microsNow = millis(); //utile pour le Delta t pour l'integrale et la dérivée
+  //partie de régulation PID
+  error = (desiredSpeed - avgSpeed)/desiredSpeed; //proportionnel
+  integral = integral + error * (microsNow-microsPrev); //integral
+  derivative = (error - previous_error) / (microsNow-microsPrev); //dérivatif
+  calculatedPWM = constrain((Kp*error+Ki*integral+Kd*derivative)*255, 0, 255); // somme du total
   previous_error = error;
-
-  analogWrite(5, calculatedPWM);
-    Serial.print("calculatedPWM ");
+  analogWrite(5, calculatedPWM); // on passe la commande au moteur
+   /* Serial.print("calculatedPWM ");
   Serial.println(calculatedPWM);//*/
    /* Serial.print("error ");
   Serial.println(error); //*/
  /* Serial.print("avgSpeed ");
   Serial.println(avgSpeed); //*/
  
-microsPrev = micros();
+microsPrev = millis(); //utile pour le Delta t pour l'integrale et la dérivée
 }
