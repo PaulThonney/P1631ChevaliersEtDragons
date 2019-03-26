@@ -5,17 +5,26 @@
 #define HOLE_NBR 50
 #define ARRAY_SIZE 2
 byte oldpulse1 = 0; // détection de flan
-double pps[ARRAY_SIZE]; //pulse par secondes
-double tps[ARRAY_SIZE]; // tours par secondes
+double pps; //pulse par secondes
+double tps; // tours par secondes
 double avgSpeed = 0; // Moyenne de 10 vitesses calculées
 double Sumspeed = 0; //Somme temporaire des vitesses pour le calcul de avgSpeed
-double mesuredSpeed[ARRAY_SIZE]; // vitesse estimée en m/s
+double mesuredSpeed; // vitesse estimée en m/s
 double calculatedPWM = 0; // PWM à appliquer au moteur après régulation
 double error, derivative, integral, previous_error = 0; // erreur entre la vitesse voulue et la mesurée
 unsigned int pot = 0; // valeure du potentiomettre de test
 unsigned int desiredSpeed = 0; // vitesse voulue
 unsigned long currentTime[2]; // temps actuel permettant de calculer la vitesse
 unsigned long microsNow, microsPrev = 0;
+
+unsigned long timerSensor = 0;
+unsigned long durationSensor = 20;
+
+unsigned long timerIntel = 0;
+unsigned long durationIntel = 1000;
+
+int nbPulse;
+bool flagPulse;
 
 void setup() {
 
@@ -38,23 +47,33 @@ void loop() {
 
     // détection de 2 pulses pour faire le calcul de vitesse intantanée (doit encore être modifié car bloquant)
     //int timeout = millis();
-    while (yolo < 2 /*|| timeout < (millis() + 1000)*/) {
-      /*Serial.println("je rentre dans le while comme un grand");//*/
-      byte pulse1 = digitalRead(2);
-
-      if (pulse1 > oldpulse1) {
-
-
-        currentTime[yolo] = micros();
-
-        yolo++;
+    if (timerSensor + durationSensor > micros()) {
+      if (digitalRead(2) == HIGH && flagPulse == false) {
+        flagPulse = true;
+        nbPulse++;
       }
-      oldpulse1 = pulse1;
+      if (digitalRead(2) == false && flagPulse == true) {
+        flagPulse = false;
+      }
+    } else {
+      if (micros() > timerIntel + durationIntel) {
+
+        timerIntel = millis();
+      }
+
+      timerSensor = micros();
+      pps = (nbPulse/20)*1000000;
+
+      nbPulse = 0;
     }
-    /*Serial.println("je quitte le while parce-que je suis un code gentil");//*/
 
-    pps[j] = 1000000 / (currentTime[1] - currentTime[0]); // le million est pour revenir en pulse/secondes
+    if (micros() > timerPID + durationPID) {
+      //analogWrite(MOTORSPEEDPIN, regulationPID(motorObjectiveSpeed, motorMeasuredSpeed));
+      regulationPID(motorObjectiveSpeed, motorMeasuredSpeed);
+      timerPID = micros();
+    }
 
+    
     tps[j] = pps[j] / HOLE_NBR; //calcul du nombre de tours/secondes
 
     mesuredSpeed[j] = 2 * PI * tps[j] * R; //calcul de la vitesse
@@ -76,7 +95,7 @@ void loop() {
 
   //partie de régulation PID
   microsNow = millis(); //utile pour le Delta t pour l'integrale et la dérivée
-  
+
   if (desiredSpeed != 0) {
     error = (desiredSpeed - avgSpeed) / desiredSpeed; //proportionnel
     integral = integral + error * (microsNow - microsPrev); //integral
