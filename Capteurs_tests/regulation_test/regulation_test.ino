@@ -1,5 +1,5 @@
-#define Kp 1
-#define Ki 0
+#define Kp 2
+#define Ki 0.005d
 #define Kd 0
 #define R 0.02d
 #define HOLE_NBR 50
@@ -23,9 +23,6 @@ unsigned long millisNow, millisPrev = 0;
 unsigned long timerSensor = 0;
 unsigned long durationSensor = DURATION;
 
-unsigned long timerPID = 0;
-unsigned long durationPID = DURATION;
-
 int nbPulse;
 
 bool flagPulse;
@@ -41,32 +38,23 @@ void setup() {
 void loop() {
 
   pot = analogRead(0);
-  desiredSpeed =   map(pot, 0, 1023, 0, 6);
-   Serial.print("desiredSpeed ");
-    Serial.println(desiredSpeed); //*/
-
-
-
-
-
-
-  // détection de 2 pulses pour faire le calcul de vitesse intantanée (doit encore être modifié car bloquant)
+  desiredSpeed =   map(pot, 0, 1023, 0, 3);
   //int timeout = millis();
- /* Serial.print("timerSensor ");
-  Serial.println(timerSensor);
-    Serial.print("durationSensor ");
-  Serial.println(durationSensor);
-    Serial.print("millis ");
-  Serial.println(millis()); //*/
-  if (timerSensor + durationSensor < millis()){
+  /* Serial.print("timerSensor ");
+    Serial.println(timerSensor);
+     Serial.print("durationSensor ");
+    Serial.println(durationSensor);
+     Serial.print("millis ");
+    Serial.println(millis()); //*/
+  if (timerSensor + durationSensor < millis()) {
     //Serial.println("triggered");
-    pps = nbPulse*uS_IN_S/DURATION;
+    pps = nbPulse * uS_IN_S / DURATION;
     regulationPID();
     timerSensor = millis();
     nbPulse = 0;
   }
   else {
-    if (!flagPulse && !digitalRead(2)){
+    if (!flagPulse && !digitalRead(2)) {
       //Serial.println("added pulse");
       flagPulse = true;
       nbPulse++;
@@ -75,17 +63,13 @@ void loop() {
       flagPulse = false;
     }
   }
- 
+
   tps = pps / HOLE_NBR; //calcul du nombre de tours/secondes
 
   /*Serial.println(tps);
-  Serial.println(pps);//*/
+    Serial.println(pps);//*/
 
   mesuredSpeed = 2 * PI * tps * R; //calcul de la vitesse
-
-  //partie de régulation PID
-
-  
 }
 
 void regulationPID() {
@@ -104,12 +88,14 @@ void regulationPID() {
   analogWrite(5, calculatedPWM); // on passe la commande au moteur
 
 
-  /* Serial.print("calculatedPWM ");
-    Serial.println(calculatedPWM);//*/
-   Serial.print("error ");
-    Serial.println(error); //*/
-    Serial.print("mesuredSpeed ");
-    Serial.println(mesuredSpeed); //*/
 
+  Serial.print("desiredSpeed ");
+  Serial.println(desiredSpeed); //*/
+  Serial.print("error ");
+  Serial.println(error); //*/
+  Serial.print("mesuredSpeed ");
+  Serial.println(mesuredSpeed); //*/
+  /* Serial.print("calculatedPWM ");
+     Serial.println(calculatedPWM);//*/
   millisPrev = millis(); //utile pour le Delta t pour l'integrale et la dérivée
 }
