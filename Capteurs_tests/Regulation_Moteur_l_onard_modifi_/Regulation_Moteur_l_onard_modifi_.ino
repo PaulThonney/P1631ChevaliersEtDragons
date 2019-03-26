@@ -37,6 +37,7 @@ int error;
 int previousError = 0;
 int integral = 0;
 int value = 0;
+unsigned int pot = 0; // valeure du potentiomettre de test
 /*
    Constant for the pid
 */
@@ -57,7 +58,8 @@ void setup() {
 }
 
 void loop() {
-  motorObjectiveSpeed = analogRead(0) >> 4;
+  pot = analogRead(0);
+  motorObjectiveSpeed = map(pot, 0, 1023, 0, 60);
   if (timerSensor + durationSensor > millis()) {
     if (digitalRead(SENSORPIN) == HIGH && flagPulse == false) {
       flagPulse = true;
@@ -68,17 +70,17 @@ void loop() {
     }
   } else {
     if (millis() > timerIntel + durationIntel) {
-     /* Serial.print("Objectif ");
-      Serial.println(motorObjectiveSpeed);
-      Serial.print("Pulse  ");
-      Serial.println(nbPulse);
-      Serial.print("error ");
-      Serial.println(error);
-      Serial.print("integral ");
-      Serial.println(integral);
-      Serial.print("value ");
-      Serial.println(value);
-      timerIntel = millis();//*/
+      /* Serial.print("Objectif ");
+        Serial.println(motorObjectiveSpeed);
+        Serial.print("Pulse  ");
+        Serial.println(nbPulse);
+        Serial.print("error ");
+        Serial.println(error);
+        Serial.print("integral ");
+        Serial.println(integral);
+        Serial.print("value ");
+        Serial.println(value);
+        timerIntel = millis();//*/
     }
 
     timerSensor = millis();
@@ -118,7 +120,7 @@ void regulationPID(byte objective, byte measuredValue) {
   }
   if (value < 0) {
     motorCurrentSpeed = 0;
-  
+
   } else {
     motorCurrentSpeed = value ;
   }
