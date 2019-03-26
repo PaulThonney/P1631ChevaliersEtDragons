@@ -11,11 +11,11 @@ double avgSpeed = 0; // Moyenne de 10 vitesses calculées
 double Sumspeed = 0; //Somme temporaire des vitesses pour le calcul de avgSpeed
 double mesuredSpeed[ARRAY_SIZE]; // vitesse estimée en m/s
 double calculatedPWM = 0; // PWM à appliquer au moteur après régulation
-double error, derivative, integral,previous_error = 0; // erreur entre la vitesse voulue et la mesurée
+double error, derivative, integral, previous_error = 0; // erreur entre la vitesse voulue et la mesurée
 unsigned int pot = 0; // valeure du potentiomettre de test
 unsigned int desiredSpeed = 0; // vitesse voulue
 unsigned long currentTime[2]; // temps actuel permettant de calculer la vitesse
-unsigned long microsNow,microsPrev = 0;
+unsigned long microsNow, microsPrev = 0;
 
 void setup() {
 
@@ -28,17 +28,18 @@ void loop() {
 
   pot = analogRead(0);
   desiredSpeed =   map(pot, 0, 1023, 0, 8);
- /* Serial.print("desiredSpeed ");
-  Serial.println(desiredSpeed); //*/
+  /* Serial.print("desiredSpeed ");
+    Serial.println(desiredSpeed); //*/
 
 
   for (byte j = 0; j < ARRAY_SIZE; j++) {
 
     byte yolo = 0;
-    
-  // détection de 2 pulses pour faire le calcul de vitesse intantanée (doit encore être modifié car bloquant)
-    while (yolo < 2 ) {
 
+    // détection de 2 pulses pour faire le calcul de vitesse intantanée (doit encore être modifié car bloquant)
+    //int timeout = millis();
+    while (yolo < 2 /*|| timeout < (millis() + 1000)*/) {
+      /*Serial.println("je rentre dans le while comme un grand");//*/
       byte pulse1 = digitalRead(2);
 
       if (pulse1 > oldpulse1) {
@@ -50,8 +51,7 @@ void loop() {
       }
       oldpulse1 = pulse1;
     }
-
-
+    /*Serial.println("je quitte le while parce-que je suis un code gentil");//*/
 
     pps[j] = 1000000 / (currentTime[1] - currentTime[0]); // le million est pour revenir en pulse/secondes
 
@@ -60,7 +60,6 @@ void loop() {
     mesuredSpeed[j] = 2 * PI * tps[j] * R; //calcul de la vitesse
 
   }
-
 
   for (int i = 0; i < ARRAY_SIZE; i++) {
 
@@ -74,21 +73,30 @@ void loop() {
   }
   avgSpeed = Sumspeed / ARRAY_SIZE;
   Sumspeed = 0;
-  
-  microsNow = millis(); //utile pour le Delta t pour l'integrale et la dérivée
+
   //partie de régulation PID
-  error = (desiredSpeed - avgSpeed)/desiredSpeed; //proportionnel
-  integral = integral + error * (microsNow-microsPrev); //integral
-  derivative = (error - previous_error) / (microsNow-microsPrev); //dérivatif
-  calculatedPWM = constrain((Kp*error+Ki*integral+Kd*derivative)*255, 0, 255); // somme du total
-  previous_error = error;
+  microsNow = millis(); //utile pour le Delta t pour l'integrale et la dérivée
+  
+  if (desiredSpeed != 0) {
+    error = (desiredSpeed - avgSpeed) / desiredSpeed; //proportionnel
+    integral = integral + error * (microsNow - microsPrev); //integral
+    derivative = (error - previous_error) / (microsNow - microsPrev); //dérivatif
+    calculatedPWM = constrain((Kp * error + Ki * integral + Kd * derivative) * 255, 0, 255); // somme du total
+    previous_error = error;
+  }
+  else {
+    calculatedPWM = 0;
+  }
+
   analogWrite(5, calculatedPWM); // on passe la commande au moteur
-   /* Serial.print("calculatedPWM ");
-  Serial.println(calculatedPWM);//*/
-   /* Serial.print("error ");
-  Serial.println(error); //*/
- /* Serial.print("avgSpeed ");
-  Serial.println(avgSpeed); //*/
- 
-microsPrev = millis(); //utile pour le Delta t pour l'integrale et la dérivée
+
+
+  /* Serial.print("calculatedPWM ");
+    Serial.println(calculatedPWM);//*/
+  /* Serial.print("error ");
+    Serial.println(error); //*/
+  /* Serial.print("avgSpeed ");
+    Serial.println(avgSpeed); //*/
+
+  microsPrev = millis(); //utile pour le Delta t pour l'integrale et la dérivée
 }
