@@ -1,6 +1,6 @@
-#define Kp 0.002d
-#define Ki 0.002d
-#define Kd 0.0001d
+#define Kp 1
+#define Ki 0
+#define Kd 0
 #define R 0.02d
 #define HOLE_NBR 50
 #define DURATION 20
@@ -41,8 +41,8 @@ void setup() {
 void loop() {
 
   pot = analogRead(0);
-  desiredSpeed =   map(pot, 0, 1023, 0, 3);
-  /* Serial.print("desiredSpeed ");
+  desiredSpeed =   map(pot, 0, 1023, 0, 6);
+   Serial.print("desiredSpeed ");
     Serial.println(desiredSpeed); //*/
 
 
@@ -52,14 +52,14 @@ void loop() {
 
   // détection de 2 pulses pour faire le calcul de vitesse intantanée (doit encore être modifié car bloquant)
   //int timeout = millis();
-  Serial.print("timerSensor ");
+ /* Serial.print("timerSensor ");
   Serial.println(timerSensor);
     Serial.print("durationSensor ");
   Serial.println(durationSensor);
     Serial.print("millis ");
   Serial.println(millis()); //*/
   if (timerSensor + durationSensor < millis()){
-    Serial.println("triggered");
+    //Serial.println("triggered");
     pps = nbPulse*uS_IN_S/DURATION;
     regulationPID();
     timerSensor = millis();
