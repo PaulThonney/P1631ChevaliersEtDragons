@@ -69,28 +69,28 @@ void setup() {
 }
 
 void loop() {
-  if (data == 1) {
-    Serial.println(F("Playing track 004"));
-    musicPlayer.playFullFile("/track004.mp3");
-  }
-  if (data == 2) {
-    Serial.println(F("Playing track 005"));
-    musicPlayer.playFullFile("/track005.mp3");
-  }
-  if (data == 3) {
-    Serial.println(F("Playing track 006"));
-    musicPlayer.playFullFile("/track006.mp3");
-  }
-  if (data > 14) {
+if (data > 14) {
     musicPlayer.setVolume(data, data);
   }
-
 }
+
 void receiveEvent(int howMany) {
 
   data = Wire.read();    // receive byte as an integer
   Serial.println(data);         // print the integer
-
+  if (data == 1) {
+    Serial.println(F("Playing track 004"));
+    musicPlayer.startPlayingFile("/track001.mp3");
+  }
+  if (data == 2) {
+    Serial.println(F("Playing track 005"));
+    musicPlayer.startPlayingFile("/track002.mp3");
+  }
+  if (data == 3) {
+    Serial.println(F("Playing track 006"));
+    musicPlayer.startPlayingFile("/track003.mp3");
+  }
+  
 }
 
 /// File listing helper
