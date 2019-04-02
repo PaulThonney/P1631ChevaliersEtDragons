@@ -80,58 +80,59 @@ void setup() {
 
 void loop()
 {
-   // Set volume for left, right channels. lower numbers == louder volume!
+  // Set volume for left, right channels. lower numbers == louder volume!
   musicPlayer.setVolume(volume, volume);
+  Serial.print("volume : ");
   Serial.println(volume);
-  
-  if(theme == 0)
-      {
-             Wire.beginTransmission(1); // transmit to device #8
-  Wire.write(1);              // sends one byte
-  Wire.endTransmission();    // stop transmitting
-      }
-if (mega == 1 || mega == 2 || mega == 3 || mega == 4)
-    {
-      theme = mega ;
-    }
 
-if (mega == 11 )
-    {
-      volume = 60;
-    }
-
-if (mega == 12)
-    {
-      volume =45;
-    }
-
-if (mega == 13)
-    {
-      volume =30;
-    }
-
-if (mega == 14)
-    {
-      volume =15;
-    }
-    
-  if (mega == 5) {
-  //  if (SensorRead == false) {
-   //   SensorRead = true;
-      RandomNum = random(1, 3);
-      mega = 60;
-      if (MusicPlaying == false)
-      {
-        TimeNowMusic = millis();
-       
-        PlayMusic();
-        
-      }
- //   }
+  if (theme == 0)
+  {
+    Wire.beginTransmission(1); // transmit to device #8
+    Wire.write(1);              // sends one byte
+    Wire.endTransmission();    // stop transmitting
   }
-//  else {
-//    SensorRead = false;
- // }
+  if (mega == 1 || mega == 2 || mega == 3 || mega == 4)
+  {
+    theme = mega ;
+  }
+
+  if (mega == 11 )
+  {
+    volume = 60;
+  }
+
+  if (mega == 12)
+  {
+    volume = 45;
+  }
+
+  if (mega == 13)
+  {
+    volume = 30;
+  }
+
+  if (mega == 14)
+  {
+    volume = 15;
+  }
+
+  if (mega == 5) {
+    //  if (SensorRead == false) {
+    //   SensorRead = true;
+    RandomNum = random(1, 3);
+    mega = 60;
+    if (MusicPlaying == false)
+    {
+      TimeNowMusic = millis();
+
+      PlayMusic();
+
+    }
+    //   }
+  }
+  //  else {
+  //    SensorRead = false;
+  // }
 
 
 
@@ -151,6 +152,7 @@ if (mega == 14)
 void receiveEvent(int howMany) {
 
   mega = Wire.read();    // receive byte as an integer
+  Serial.print("infomega :  ");
   Serial.println(mega);         // print the integer
 }
 
@@ -209,8 +211,8 @@ void StopMusic()
 {
   musicPlayer.stopPlaying();
   MusicPlaying = false;
-     Wire.beginTransmission(1); // transmit to device #8
+  Wire.beginTransmission(1); // transmit to device #8
   Wire.write(2);              // sends one byte
   Wire.endTransmission();    // stop transmitting
- 
+
 }
