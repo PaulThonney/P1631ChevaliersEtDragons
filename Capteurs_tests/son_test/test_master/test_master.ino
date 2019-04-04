@@ -23,12 +23,12 @@ void loop() {
   int newbtn2 = !digitalRead(3);
   int newbtn3 = !digitalRead(4);
   pot = analogRead(0);
-  soundVal = map(pot, 0, 1023, 60, 15);
+  soundVal = map(pot, 0, 1023, 100, 15);
 if (soundVal != oldsoundVal){
       Wire.beginTransmission(2); // transmit to device #8
     Wire.write(soundVal);              // sends one byte
     Wire.endTransmission();    // stop transmitting
-    Serial.println(soundVal);
+ 
     oldsoundVal = soundVal;
 }
   if (newbtn1 > oldbtn1) {
