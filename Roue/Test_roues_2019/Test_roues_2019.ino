@@ -47,5 +47,26 @@ void loop() {
 
   analogWrite(PWM_OUTPUT_MOTOR_R, 0);
   analogWrite(PWM_OUTPUT_MOTOR_L, 0);
+  
+  delay(1000);
+
+  digitalWrite(INPUT_1_MOTOR_R,    HIGH);
+  digitalWrite(INPUT_2_MOTOR_R,    LOW);
+  digitalWrite(INPUT_3_MOTOR_L,    HIGH);
+  digitalWrite(INPUT_4_MOTOR_L,    LOW);
+
+  analogWrite(PWM_OUTPUT_MOTOR_L, 200);
+  analogWrite(PWM_OUTPUT_MOTOR_R, 200);
+  
+  delay(1000);
+  
+  digitalWrite(INPUT_1_MOTOR_R,    LOW);
+  digitalWrite(INPUT_2_MOTOR_R,    LOW);
+  digitalWrite(INPUT_3_MOTOR_L,    LOW);
+  digitalWrite(INPUT_4_MOTOR_L,    LOW);
+
+  analogWrite(PWM_OUTPUT_MOTOR_R, 0);
+  analogWrite(PWM_OUTPUT_MOTOR_L, 0);
+  
   delay(1000);
 }
