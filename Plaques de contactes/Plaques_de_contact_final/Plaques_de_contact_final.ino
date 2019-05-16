@@ -155,8 +155,7 @@ void clignoteTousLed(uint32_t couleur)
   }
 }
 
-void arcenciel(uint8_t n) //programme que j'ai pas compris pris sur l'exemple donné par la bibliotèque
-                          //il y a ma propre fonction arc-en-ciel dans le programme précédent mais le changment de couleur est bizarement trop brusque
+void arcenciel(uint8_t n) //programme pris de la bibliothèque
 {
   for (uint16_t i = 0; i < matrice[n].numPixels(); i++)
     matrice[n].setPixelColor(i, roue(n, (i + cycle[n]) & 255));
@@ -167,7 +166,7 @@ void arcenciel(uint8_t n) //programme que j'ai pas compris pris sur l'exemple do
 }
 
 
-uint32_t roue(uint8_t n, byte rouePos)//programme aussi pris de l'exemple que je comprends encore moins, ça fonctionne et c'est tout ce qui compte
+uint32_t roue(uint8_t n, byte rouePos)//programme pris de la bibliothèque
 {
   rouePos = 255 - rouePos;
   if (rouePos < 85) {
@@ -180,4 +179,3 @@ uint32_t roue(uint8_t n, byte rouePos)//programme aussi pris de l'exemple que je
   rouePos -= 170;
   return matrice[n].Color(rouePos * 3, 255 - rouePos * 3, 0);
 }
-
