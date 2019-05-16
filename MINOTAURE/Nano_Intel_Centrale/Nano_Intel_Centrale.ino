@@ -22,8 +22,20 @@
 #define SON // PCB HMI,  Nano se trouvant à droite lorsqu'on regarde le U depuis sa base. Il gère le HP
 
 
+//codes pour actions
+
+#define COUP
+
+
 
 int message;//adresse du capteur qui lui parle
+
+byte vie = 3;
+
+int angle;
+
+int angleMoteur;
+
 //int objet = 0;//nombre d'objet capté par la Pixy
 //int distance_gauche, distance_droite;//distance des lasers
 //int distance_avant, distance_arriere;//distance des ultrasons
@@ -43,52 +55,38 @@ void setup()
 
 void loop()
 {
-  if (adresse_capteur == ADRESSE_PIXY1)//il ne fait rien
+  if (message == CONTACT)//il ne fait rien
   {
-    Serial.println(objet);
-    adresse_capteur = 0; //pour éviter qu'il ne reste coincé ici car si pas de communication adresse_capteur ne remet pas à 0 avec receivevent
-  }
-  else if (adresse_capteur == ADRESSE_CONTACT)//il ne fait rien
-  {
-    Serial.println("Contact");
-    adresse_capteur = 0; // remise à 0 de la variable
-  }
-  else if (adresse_capteur == ADRESSE_COULEUR)
-  {
-    Serial.println("Couleur!");
+    Vie-- ;
 
-    Wire.beginTransmission(ADRESSE_ROUE);//informe au nano puissance qu'il doit reculer
-    Wire.write(ADRESSE_COULEUR);
+    Wire.beginTransmission(SON);
+    Wire.write(COUP);    //donne l'angle de la direction à prendre
+    Wire.endTransmission();
+    
+    message = 0; //pour éviter qu'il ne reste coincé ici car si pas de communication message ne remet pas à 0 avec receivevent
+  }
+  else if (message == TRAQUAGE_AV)
+  {
+    int angleMoteur = 180 - angle;    //inverse l'angle car pas le même référence
+
+    Wire.beginTransmission(ROUES);
+    Wire.write(angleMoteur);    //donne l'angle de la direction à prendre
     Wire.endTransmission();
 
-    adresse_capteur = 0; // remise à 0 de la variable
+    message = 0;    // remise à 0 de la variable
   }
-  else if (adresse_capteur == ADRESSE_SERVO)
-  {
-    int angleMoteur = 180 - angle; //inverse l'angle car pas le même référence
-
-    Wire.beginTransmission(ADRESSE_ROUE);
-    Wire.write(ADRESSE_SERVO);
-    Wire.write(angleMoteur);//donne l'angle de la direction à prendre
-    Wire.endTransmission();
-
-    adresse_capteur = 0; // remise à 0 de la variable
-  }
-  else
-    Serial.println("rien");
+ 
 }
 
 void receiveEvent(int howMany)
 {
-  //Serial.println(howMany);
   message = Wire.read(); //récuère l'addresse de l'émetteur
-  if (message == )
+ 
+  if (message == TRAQUAGE_AV)
   {
-    objet = Wire.read();//récupère le nomre d'objet
-    //Serial.println("PIXY");
+   angle = (uint8_t)Wire.read();//récupère l'angle reçu
   }
-  else if (adresse_capteur == ADRESSE_CONTACT)
-    Serial.println("Contact");//il ne fait rien
-  else if (adresse_capteur == ADRESSE_SERVO)
-    angle = (uint8_t)Wire.read();//récupère l'angle reçu
+
 }
+
+    
