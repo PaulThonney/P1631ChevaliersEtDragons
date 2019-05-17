@@ -48,7 +48,7 @@ void loop()
   if (pixy.getBlocks())
   {
     blocks = pixy.getBlocks();
-    //Serial.println(pixy.blocks[0].x);
+    Serial.println(pixy.blocks[0].x);
     PositionX = pixy.blocks[0].x;
 
     int incremenation = 0; //angle ajouté ou soustré au servo pour suivre sa cible
@@ -82,12 +82,12 @@ void loop()
       servo.write (servo.read() - incremenation); //tourne la tête à gauche
     }
 
-    Serial.println(servo.read());
+    //Serial.println(servo.read());
     Wire.beginTransmission(ADRESSE_INTILLIGENCE_CENTRALE);
     Wire.write(ADRESSE_SERVO); //permet à l'intilligence centrale de savoir qui lui parle
     Wire.write(servo.read()); // donne l'angle de la direction à prendre pour se déplacer
     Wire.endTransmission();
-
+    //Serial.println(servo.read());
     temps = millis() / 1000; //temps divisé par 1000 pour remplir la mémoire de la variable moins rapidement
 
   }
