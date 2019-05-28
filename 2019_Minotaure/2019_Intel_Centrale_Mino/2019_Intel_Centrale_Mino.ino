@@ -40,7 +40,7 @@
 
 byte dataBuffer[BUFFER_SIZE];
 byte output = 0;
-bool flancsMontants[] = {false, false, false}; //0: SOUTH & NORTH; 1: A; 2: NULL
+bool flancsMontants[] = {false, false, false}; //0: SOUTH & NORTH; 1: A; 2: B
 byte vie = 3;// Variable qui indique le nombre de vie restante
 int message;//adresse du capteur qui lui parle
 byte anglePixy;
@@ -119,17 +119,37 @@ void loop()
 }
 
 /*
+ * Gère la pause lors de la partie
+ */
+bool checkPause() {
+  if (ButtonB() && !flancsMontants[2]) {
+    setState(State::PauseGenerale1);
+    flancsMontants[2] = true;
+    return true;
+  }
+  else if (!ButtonB()) {
+    flancsMontants[2] = false;
+  }
+  return false;
+}
+
+/*
    Fonction qui gère le mode automatique des robots
 */
 void loopAutomatique() {
-
+  if(checkPause()){ // quitte directement la loop si la pause est pressée et évite que le "state" puisse être changé dans la fonction
+    return;
+  }
 }
 
 /*
    Fonction qui gère le mode manuel des robots
 */
 void loopManuel() {
-
+  if(checkPause()){// quitte directement la loop si la pause est pressée et évite que le "state" puisse être changé dans la fonction
+    return;
+  }
+  
 }
 
 void loopPauseGenerale1() {
@@ -142,7 +162,7 @@ void loopPauseGenerale1() {
     flancsMontants[0] = false;
   }
   if (ButtonA() && !flancsMontants[1]) {
-    setState(savedMode);
+    setState(State::MenuGO);
     flancsMontants[1] = true;
   }
   else if (!ButtonA()) {
@@ -205,12 +225,12 @@ void  loopMenuSelection2() {
 }
 
 void  loopMenuGo() {
-  if(millis()%2000>1000){
+  if (millis() % 2000 > 1000) {
     output = 30;// Image 1
-  }else{
+  } else {
     output = 30;// Image 2
   }
-  
+
   if (ButtonA() && !flancsMontants[1]) {
     setState(savedMode);
     flancsMontants[1] = true;
