@@ -1,8 +1,9 @@
-// Code de l'Arduino Mega gérant l'intelligence centrale du Minotaure
-//Son but est de récolter toutes les informations des capteurs et de prendre une décision en conséquence
-// Dany VALADO Lucien PRUVOT Paul THONNEY
-// 28.05.19
-
+/* Code de l'Arduino gérant l'intelligence centrale du Minotaure
+  Son but est de récolter toutes les informations des capteurs et de prendre des décisions en conséquence
+  AUTEURS: Dany VALADO (2018) Lucien PRUVOT Paul THONNEY
+  DATE: 28.05.19
+  REMERCIEMENTS: Merci à Maxime SCHARWATH et Joan MAILLARD pour leur aide
+*/
 
 #include <Wire.h> //I2C
 
@@ -39,7 +40,11 @@
 
 byte dataBuffer[BUFFER_SIZE];
 byte output = 0;
-bool flancsMontants[] = {false,false,false}; //0: SOUTH & NORTH; 1: A; 2: NULL
+bool flancsMontants[] = {false, false, false}; //0: SOUTH & NORTH; 1: A; 2: NULL
+byte vie = 3;// Variable qui indique le nombre de vie restante
+int message;//adresse du capteur qui lui parle
+byte anglePixy;
+byte sonEtVibreur; //4 premiers bits: buzzer; 4 derniers bits: vibreur
 
 typedef enum State { // On définit les états possible de la machine
   Automatique,
@@ -51,16 +56,10 @@ typedef enum State { // On définit les états possible de la machine
   MenuGO,
 } State;
 
-State currentState = State::MenuSelection1;
 
-
-byte vie = 3;// Variable qui indique le nombre de vie restante
-
-int message;//adresse du capteur qui lui parle
-
-
-
-byte anglePixy;
+State savedMode = State::Automatique;
+State currentState = State::MenuSelection1; // On démarre sur le menu de sélection
+State previousState; // Ancien état
 
 void setup()
 {
@@ -69,49 +68,48 @@ void setup()
   Serial.begin(115200, SERIAL_8N1);
 }
 
-
 void loop()
 {
-  communicationManette();
+  communicationManette(); // On commence par communiquer les dernières infos avec la manette
 
   switch (currentState) {
-    case State::Automatique: {
+    case State::Automatique: { // Mode automatique du robot
 
         loopAutomatique();
 
         break;
       }
-    case State::Manuel: {
+    case State::Manuel: { // Mode manuel du robot
         loopManuel();
 
         break;
       }
-    case State::PauseGenerale1: {
+    case State::PauseGenerale1: { // Mode pause avec curseur sur "Reprendre"
 
         loopPauseGenerale1();
 
         break;
       }
-    case State::PauseGenerale2: {
+    case State::PauseGenerale2: { // Mode pause avec curseur sur "Menu Principal"
 
         loopPauseGenerale2();
 
         break;
       }
-    case State::MenuSelection1: {
+    case State::MenuSelection1: { // Mode menu principal avec curseur sur "Automatique"
 
         loopMenuSelection1();
 
         break;
       }
 
-       case State::MenuSelection2: {
+    case State::MenuSelection2: { // Mode menu principal avec curseur sur "Manuel"
 
         loopMenuSelection2();
 
         break;
-       }
-    case State::MenuGO: {
+      }
+    case State::MenuGO: { // Mode MenuGo avec affichage d'un logo "GO"
 
         loopMenuGo();
 
@@ -121,25 +119,118 @@ void loop()
 }
 
 /*
-    Elle change l'état actuelle de la variable state et retourne son état actuel
-    Permet de faire d'autres actions sur des variables lors d'un changement d'état directement dans cette fonction si nécessaire
+   Fonction qui gère le mode automatique des robots
 */
-State setState(State state) {
-  currentState = state;
-  return currentState;
+void loopAutomatique() {
+
 }
 
-void communicationManette() {
-  uint8_t dataBufferWrite[2] = {output, 127};// réenvoie les données à la manette
-  Serial.write(dataBufferWrite, 2);
-  if (Serial.available() < 8) { // controlle la longueure de la tramme et si elle ne correspond pas il quitte et remet à zero les buffers de boutons
-    for (int i = 0; i < BUFFER_SIZE; i++) {
-      dataBuffer[i] = 0;
-    }
-    return;
-  }
-  Serial.readBytes(dataBuffer, BUFFER_SIZE); //lit les infos en provenance de la manette
+/*
+   Fonction qui gère le mode manuel des robots
+*/
+void loopManuel() {
+
 }
+
+void loopPauseGenerale1() {
+  output = 29;
+  if (ButtonNORTH() && !flancsMontants[0] || ButtonSOUTH() && !flancsMontants[0]) {
+    setState(State::PauseGenerale2);
+    flancsMontants[0] = true;
+  }
+  else if (!ButtonNORTH() && !ButtonSOUTH()) {
+    flancsMontants[0] = false;
+  }
+  if (ButtonA() && !flancsMontants[1]) {
+    setState(savedMode);
+    flancsMontants[1] = true;
+  }
+  else if (!ButtonA()) {
+    flancsMontants[1] = false;
+  }
+}
+
+void loopPauseGenerale2() {
+  output = 30;
+  if (ButtonNORTH() && !flancsMontants[0] || ButtonSOUTH() && !flancsMontants[0]) {
+    setState(State::PauseGenerale1);
+    flancsMontants[0] = true;
+  }
+  else if (!ButtonNORTH() && !ButtonSOUTH()) {
+    flancsMontants[0] = false;
+  }
+  if (ButtonA() && !flancsMontants[1]) {
+    setState(State::MenuSelection1);
+    flancsMontants[1] = true;
+  }
+  else if (!ButtonA()) {
+    flancsMontants[1] = false;
+  }
+}
+void  loopMenuSelection1() {
+  output = 1;
+  if (ButtonNORTH() && !flancsMontants[0] || ButtonSOUTH() && !flancsMontants[0]) {
+    setState(State::MenuSelection2);
+    flancsMontants[0] = true;
+  }
+  else if (!ButtonNORTH() && !ButtonSOUTH()) {
+    flancsMontants[0] = false;
+  }
+  if (ButtonA() && !flancsMontants[1]) {
+    savedMode = State::Automatique;
+    setState(State::MenuGO);
+    flancsMontants[1] = true;
+  }
+  else if (!ButtonA()) {
+    flancsMontants[1] = false;
+  }
+}
+void  loopMenuSelection2() {
+  output = 2;
+  if (ButtonNORTH() && !flancsMontants[0] || ButtonSOUTH() && !flancsMontants[0]) {
+    setState(State::MenuSelection1);
+    flancsMontants[0] = true;
+  }
+  else if (!ButtonNORTH() && !ButtonSOUTH()) {
+    flancsMontants[0] = false;
+  }
+  if (ButtonA() && !flancsMontants[1]) {
+    savedMode = State::Manuel;
+    setState(State::MenuGO);
+    flancsMontants[1] = true;
+  }
+  else if (!ButtonA()) {
+    flancsMontants[1] = false;
+  }
+}
+
+void  loopMenuGo() {
+  if(millis()%2000>1000){
+    output = 30;// Image 1
+  }else{
+    output = 30;// Image 2
+  }
+  
+  if (ButtonA() && !flancsMontants[1]) {
+    setState(savedMode);
+    flancsMontants[1] = true;
+  }
+  else if (!ButtonA()) {
+    flancsMontants[1] = false;
+  }
+}
+
+/*
+   Fonction qui gère la réception des messages sur le bus I2C central
+*/
+void receiveEvent(int howMany) {
+  message = (uint8_t)Wire.read();
+  if (message == TRAQUAGE_AV)
+  {
+    anglePixy = (uint8_t)Wire.read();//récupère l'angle reçu
+  }
+}
+
 /*
     Les fonctions suivantes permettent de récupèrer l'état de n'importe quel bouton/joystick plus loin dans le code
 */
@@ -225,72 +316,25 @@ bool ButtonSELECT() {
   return bitRead(dataBuffer[0], SELECT);
 }
 
-/*
-   Fonction qui gère le mode automatique des robots
-*/
-void loopAutomatique() {
-
+void communicationManette() {
+  uint8_t dataBufferWrite[2] = {output, sonEtVibreur};// réenvoie les données à la manette
+  Serial.write(dataBufferWrite, 2);
+  if (Serial.available() < 8) { // controlle la longueure de la tramme et si elle ne correspond pas il quitte et remet à zero les buffers de boutons
+    for (int i = 0; i < BUFFER_SIZE; i++) {
+      dataBuffer[i] = 0;
+    }
+    return;
+  }
+  Serial.readBytes(dataBuffer, BUFFER_SIZE); //lit les infos en provenance de la manette
 }
 
 /*
-   Fonction qui gère le mode manuel des robots
+    Elle change l'état actuelle de la variable state et retourne son état actuel
+    Permet de faire d'autres actions sur des variables lors d'un changement d'état directement dans cette fonction si nécessaire
 */
-void loopManuel() {
-
-}
-
-void loopPauseGenerale1() {
-
-}
-void loopPauseGenerale2() {
-
-}
-void  loopMenuSelection1() {
-  output = 1;
-  if (ButtonNORTH() && !flancsMontants[0] || ButtonSOUTH() && !flancsMontants[0]) {
-    setState(MenuSelection2);
-    flancsMontants[0] = true;
-  }
-  else if(!ButtonNORTH() && !ButtonSOUTH()) {
-    flancsMontants[0] = false;
-  }
-  if (ButtonA() && !flancsMontants[1]){
-    setState(Automatique);
-    flancsMontants[1] = true;
-  }
-  else if(!ButtonA()){
-    flancsMontants[1] = false;
-  }
-}
-void  loopMenuSelection2() {
-  output = 2;
-  if (ButtonNORTH() && !flancsMontants[0] || ButtonSOUTH() && !flancsMontants[0]) {
-    setState(MenuSelection1);
-    flancsMontants[0] = true;
-  }
-  else if(!ButtonNORTH() && !ButtonSOUTH()) {
-    flancsMontants[0] = false;
-  }
-  if (ButtonA() && !flancsMontants[1]){
-    setState(Manuel);
-    flancsMontants[1] = true;
-  }
-  else if(!ButtonA()){
-    flancsMontants[1] = false;
-  }
-}
-
-void  loopMenuGo() {
-
-}
-
-/*
-   Fonction qui gère la réception des messages sur le bus I2C central
-*/
-void receiveEvent(int howMany) {
-  message = (uint8_t)Wire.read();
-  if (message == TRAQUAGE_AV)
-  {
-    anglePixy = (uint8_t)Wire.read();//récupère l'angle reçu
-  }
+State setState(State state) {
+  if (currentState == state)return currentState;
+  previousState = currentState;
+  currentState = state;
+  return currentState;
 }
