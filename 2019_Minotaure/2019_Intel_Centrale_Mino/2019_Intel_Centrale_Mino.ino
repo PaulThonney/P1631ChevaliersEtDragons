@@ -39,7 +39,7 @@
 
 byte dataBuffer[BUFFER_SIZE];
 
-typedef enum State {
+typedef enum State { // On définit les états possible de la machine 
   Automatique,
   Manuel,
   PauseGenerale,
@@ -49,21 +49,11 @@ typedef enum State {
 
 State currentState = State::MenuSelection;
 
-byte vie = 3;
+
+byte vie = 3;// Variable qui indique le nombre de vie restante
 
 int message;//adresse du capteur qui lui parle
-int angle;
-int angleMoteur;
 
-//int objet = 0;//nombre d'objet capté par la Pixy
-//int distance_gauche, distance_droite;//distance des lasers
-//int distance_avant, distance_arriere;//distance des ultrasons
-//long  temps1 = 0;
-//int x = 0; //position de joystick virtuel représentant la direction du déplacement
-//int y = 1024;
-//byte xx [2];//position à envoyer par I2C au nano puissance
-//byte yy [2];
-//int angle;//angle de la direction du déplacement, comme x et y
 
 void setup()
 {
@@ -85,6 +75,12 @@ void loop()
       }
     case State::Manuel: {
         loopManuel();
+
+        break;
+      }
+    case State::PauseGenerale: {
+
+        loopPauseGenerale();
 
         break;
       }
@@ -110,30 +106,30 @@ void communicationManette() {
   }
   Serial.readBytes(dataBuffer, BUFFER_SIZE); //lit les infos en provenance de la manette
 }
-/* 
- *  Les fonctions suivantes permettent de récupèrer l'état de n'importe quel bouton/joystick plus loin dans le code
- */
-byte AxisLX(){
+/*
+    Les fonctions suivantes permettent de récupèrer l'état de n'importe quel bouton/joystick plus loin dans le code
+*/
+byte AxisLX() {
   return dataBuffer[2];
 }
 
-byte AxisLY(){
+byte AxisLY() {
   return dataBuffer[3];
 }
 
-byte AxisRX(){
+byte AxisRX() {
   return dataBuffer[4];
 }
 
-byte AxisRY(){
+byte AxisRY() {
   return dataBuffer[5];
 }
 
-byte AxisLT(){
+byte AxisLT() {
   return dataBuffer[6];
 }
 
-byte AxisRT(){
+byte AxisRT() {
   return dataBuffer[7];
 }
 
@@ -190,28 +186,28 @@ bool ButtonSTART() {
 }
 
 bool ButtonSELECT() {
-  
+
   return bitRead(dataBuffer[0], SELECT);
 }
 
 /*
- * Fonction qui gère le mode automatique des robots
- */
+   Fonction qui gère le mode automatique des robots
+*/
 void loopAutomatique() {
 
 }
 
 /*
- * Fonction qui gère le mode manuel des robots
- */
-void loopManuel(){
-  
+   Fonction qui gère le mode manuel des robots
+*/
+void loopManuel() {
+
 }
 
 /*
- * Fonction qui gère la réception des messages sur le bus I2C central
- */
-void receiveEvent(int howMany){
+   Fonction qui gère la réception des messages sur le bus I2C central
+*/
+void receiveEvent(int howMany) {
   message = (uint8_t)Wire.read();
 
   if (message == TRAQUAGE_AV)
