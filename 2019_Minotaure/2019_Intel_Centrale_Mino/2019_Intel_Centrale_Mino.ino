@@ -38,16 +38,20 @@
 #define SELECT 0 //addr 0
 
 byte dataBuffer[BUFFER_SIZE];
+byte output = 0;
+bool flancsMontants[] = {false,false,false}; //0: SOUTH & NORTH; 1: A; 2: NULL
 
 typedef enum State { // On définit les états possible de la machine
   Automatique,
   Manuel,
-  PauseGenerale,
-  MenuSelection,
+  PauseGenerale1,
+  PauseGenerale2,
+  MenuSelection1,
+  MenuSelection2,
   MenuGO,
 } State;
 
-State currentState = State::MenuSelection;
+State currentState = State::MenuSelection1;
 
 
 byte vie = 3;// Variable qui indique le nombre de vie restante
@@ -82,18 +86,31 @@ void loop()
 
         break;
       }
-    case State::PauseGenerale: {
+    case State::PauseGenerale1: {
 
-        loopPauseGenerale();
-
-        break;
-      }
-    case State::MenuSelection: {
-
-        loopMenuSelection();
+        loopPauseGenerale1();
 
         break;
       }
+    case State::PauseGenerale2: {
+
+        loopPauseGenerale2();
+
+        break;
+      }
+    case State::MenuSelection1: {
+
+        loopMenuSelection1();
+
+        break;
+      }
+
+       case State::MenuSelection2: {
+
+        loopMenuSelection2();
+
+        break;
+       }
     case State::MenuGO: {
 
         loopMenuGo();
@@ -113,7 +130,7 @@ State setState(State state) {
 }
 
 void communicationManette() {
-  uint8_t dataBufferWrite[2] = {127, 127};// réenvoie les données à la manette
+  uint8_t dataBufferWrite[2] = {output, 127};// réenvoie les données à la manette
   Serial.write(dataBufferWrite, 2);
   if (Serial.available() < 8) { // controlle la longueure de la tramme et si elle ne correspond pas il quitte et remet à zero les buffers de boutons
     for (int i = 0; i < BUFFER_SIZE; i++) {
@@ -222,12 +239,45 @@ void loopManuel() {
 
 }
 
-void loopPauseGenerale() {
+void loopPauseGenerale1() {
 
 }
+void loopPauseGenerale2() {
 
-void  loopMenuSelection() {
-
+}
+void  loopMenuSelection1() {
+  output = 1;
+  if (ButtonNORTH() && !flancsMontants[0] || ButtonSOUTH() && !flancsMontants[0]) {
+    setState(MenuSelection2);
+    flancsMontants[0] = true;
+  }
+  else if(!ButtonNORTH() && !ButtonSOUTH()) {
+    flancsMontants[0] = false;
+  }
+  if (ButtonA() && !flancsMontants[1]){
+    setState(Automatique);
+    flancsMontants[1] = true;
+  }
+  else if(!ButtonA()){
+    flancsMontants[1] = false;
+  }
+}
+void  loopMenuSelection2() {
+  output = 2;
+  if (ButtonNORTH() && !flancsMontants[0] || ButtonSOUTH() && !flancsMontants[0]) {
+    setState(MenuSelection1);
+    flancsMontants[0] = true;
+  }
+  else if(!ButtonNORTH() && !ButtonSOUTH()) {
+    flancsMontants[0] = false;
+  }
+  if (ButtonA() && !flancsMontants[1]){
+    setState(Manuel);
+    flancsMontants[1] = true;
+  }
+  else if(!ButtonA()){
+    flancsMontants[1] = false;
+  }
 }
 
 void  loopMenuGo() {
