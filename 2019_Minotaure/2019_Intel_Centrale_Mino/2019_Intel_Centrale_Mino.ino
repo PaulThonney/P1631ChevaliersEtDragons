@@ -1,9 +1,8 @@
-// Code de l'Arduino Mega gérant l'intilligence centrale du Minotaure
+// Code de l'Arduino Mega gérant l'intelligence centrale du Minotaure
 //Son but est de récolter toutes les informations des capteurs et de prendre une décision en conséquence
-// Dany VALADO
-// 01.07.2017
-// Ce qu'il reste à ajouter dans le code :
-//  - beaucoup de chose, vraiment beaucoup
+// Dany VALADO Lucien PRUVOT Paul THONNEY
+// 28.05.19
+
 
 #include <Wire.h> //I2C
 
@@ -21,12 +20,15 @@
 
 #define SON // PCB HMI,  Nano se trouvant à droite lorsqu'on regarde le U depuis sa base. Il gère le HP
 
+typedef enum State {
+  Automatique,
+  Manuel,
+  PauseGenerale,
+  MenuSelection
+  MenuGO,
+} State;
 
-//codes pour actions
-
-#define COUP
-
-#define OBJET
+State currentState = State::MenuSelection;
 
 int message;//adresse du capteur qui lui parle
 
@@ -55,38 +57,37 @@ void setup()
 
 void loop()
 {
-  if (message == COUP)//il ne fait rien
-  {
-    Vie-- ;
+checkButtons();
+  switch (currentState) {
+    case State::Automatique: {
+      
+        loopAutomatique();
+        
+        break;
+      }
+      
 
-    Wire.beginTransmission(SON);
-    Wire.write(COUP);    //donne l'angle de la direction à prendre
-    Wire.endTransmission();
-    
-    message = 0; //pour éviter qu'il ne reste coincé ici car si pas de communication message ne remet pas à 0 avec receivevent
   }
-  else if (message == TRAQUAGE_AV)
-  {
-    int angleMoteur = 180 - angle;    //inverse l'angle car pas le même référence
-
-    Wire.beginTransmission(ROUES);
-    Wire.write(angleMoteur);    //donne l'angle de la direction à prendre
-    Wire.endTransmission();
-
-    message = 0;    // remise à 0 de la variable
-  }
- 
 }
 
+/* Elle change l'état actuelle de la variable state et retourne son état actuel
+    Permet de faire d'autres actions sur des variables lors d'un changement d'état directement dans cette fonction si nécessaire
+*/
+State setState(State state) {
+  currentState = state;
+  return currentState;
+}
+void
+void loopAutomatique(){
+  
+}
 void receiveEvent(int howMany)
 {
-  message = (uint8_t)Wire.read(); 
-  
+  message = (uint8_t)Wire.read();
+
   if (message == TRAQUAGE_AV)
   {
-   angle = (uint8_t)Wire.read();//récupère l'angle reçu
+    angle = (uint8_t)Wire.read();//récupère l'angle reçu
   }
 
 }
-
-    
