@@ -10,11 +10,11 @@
 
 #define INTEL 1 // adresse de l'intelligence centrale, arduino nano sur le PCB Bluetooth
 
-#define TETE // Arduino Nano se trouvant sur le PCB traquage_AV (pcb du bas de la tête)
+#define TRAQUAGE_AV 20 // Arduino Nano se trouvant sur le PCB traquage_AV (pcb du bas de la tête)
 
 #define CONTACT 2  //  PCB HMI, Nano se trouvant à gauche lorsqu'on regarde le U depuis sa base. Il gère les plaque de contact et les LED
 
-#define ROUES // PCB Puissance, "Arduino 2" Nano
+#define ROUES 19// PCB Puissance, "Arduino 2" Nano
 
 #define TRAQUAGE_AR // Arduino Nano se trouvant sur le PCB traquage_AR (pcb du haut de la tête) il gère la fumée
 
@@ -39,7 +39,7 @@
 
 byte dataBuffer[BUFFER_SIZE];
 
-typedef enum State { // On définit les états possible de la machine 
+typedef enum State { // On définit les états possible de la machine
   Automatique,
   Manuel,
   PauseGenerale,
@@ -53,7 +53,7 @@ State currentState = State::MenuSelection;
 byte vie = 3;// Variable qui indique le nombre de vie restante
 
 int message;//adresse du capteur qui lui parle
-
+byte anglePixy;
 
 void setup()
 {
@@ -66,6 +66,7 @@ void setup()
 void loop()
 {
   communicationManette();
+
   switch (currentState) {
     case State::Automatique: {
 
@@ -84,10 +85,23 @@ void loop()
 
         break;
       }
+    case State::MenuSelection: {
+
+        loopMenuSelection();
+
+        break;
+      }
+    case State::MenuGO: {
+
+        loopMenuGo();
+
+        break;
+      }
   }
 }
 
-/* Elle change l'état actuelle de la variable state et retourne son état actuel
+/*
+    Elle change l'état actuelle de la variable state et retourne son état actuel
     Permet de faire d'autres actions sur des variables lors d'un changement d'état directement dans cette fonction si nécessaire
 */
 State setState(State state) {
@@ -96,7 +110,7 @@ State setState(State state) {
 }
 
 void communicationManette() {
-  uint8_t dataBufferWrite[2] = {127, yolo};// réenvoie les données à la manette
+  uint8_t dataBufferWrite[2] = {127, 127};// réenvoie les données à la manette
   Serial.write(dataBufferWrite, 2);
   if (Serial.available() < 8) { // controlle la longueure de la tramme et si elle ne correspond pas il quitte et remet à zero les buffers de boutons
     for (int i = 0; i < BUFFER_SIZE; i++) {
@@ -204,14 +218,25 @@ void loopManuel() {
 
 }
 
+void loopPauseGenerale() {
+
+}
+
+void  loopMenuSelection() {
+
+}
+
+void  loopMenuGo() {
+
+}
+
 /*
    Fonction qui gère la réception des messages sur le bus I2C central
 */
 void receiveEvent(int howMany) {
   message = (uint8_t)Wire.read();
-
   if (message == TRAQUAGE_AV)
   {
-    angle = (uint8_t)Wire.read();//récupère l'angle reçu
+    anglePixy = (uint8_t)Wire.read();//récupère l'angle reçu
   }
 }
