@@ -30,12 +30,10 @@ typedef enum State {
 
 State currentState = State::MenuSelection;
 
-int message;//adresse du capteur qui lui parle
-
 byte vie = 3;
 
+int message;//adresse du capteur qui lui parle
 int angle;
-
 int angleMoteur;
 
 //int objet = 0;//nombre d'objet capté par la Pixy
@@ -77,10 +75,15 @@ State setState(State state) {
   currentState = state;
   return currentState;
 }
-void
+
+void checkButtons(){
+  
+}
+
 void loopAutomatique(){
   
 }
+
 void receiveEvent(int howMany)
 {
   message = (uint8_t)Wire.read();
