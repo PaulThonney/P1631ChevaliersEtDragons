@@ -36,15 +36,6 @@ int angle;
 
 int angleMoteur;
 
-//int objet = 0;//nombre d'objet capté par la Pixy
-//int distance_gauche, distance_droite;//distance des lasers
-//int distance_avant, distance_arriere;//distance des ultrasons
-//long  temps1 = 0;
-//int x = 0; //position de joystick virtuel représentant la direction du déplacement
-//int y = 1024;
-//byte xx [2];//position à envoyer par I2C au nano puissance
-//byte yy [2];
-//int angle;//angle de la direction du déplacement, comme x et y
 
 void setup()
 {
@@ -55,27 +46,8 @@ void setup()
 
 void loop()
 {
-  if (message == COUP)//il ne fait rien
-  {
-    Vie-- ;
-
-    Wire.beginTransmission(SON);
-    Wire.write(COUP);    //donne l'angle de la direction à prendre
-    Wire.endTransmission();
-    
-    message = 0; //pour éviter qu'il ne reste coincé ici car si pas de communication message ne remet pas à 0 avec receivevent
-  }
-  else if (message == TRAQUAGE_AV)
-  {
-    int angleMoteur = 180 - angle;    //inverse l'angle car pas le même référence
-
-    Wire.beginTransmission(ROUES);
-    Wire.write(angleMoteur);    //donne l'angle de la direction à prendre
-    Wire.endTransmission();
-
-    message = 0;    // remise à 0 de la variable
-  }
- 
+  Check Buttons;
+  
 }
 
 void receiveEvent(int howMany)
