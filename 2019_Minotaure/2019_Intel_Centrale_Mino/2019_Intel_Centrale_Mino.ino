@@ -194,6 +194,9 @@ void loopPauseGenerale2() {
   }
 }
 
+/*
+ * Gère le menu général de selection de mode (affichage 1 et boutons)
+ */
 void  loopMenuSelection1() {
   output = 1;
   if (ButtonNORTH() && !flancsMontants[0] || ButtonSOUTH() && !flancsMontants[0]) {
@@ -212,6 +215,10 @@ void  loopMenuSelection1() {
     flancsMontants[1] = false;
   }
 }
+
+/*
+ * Gère le menu général de selection de mode (affichage 2 et boutons)
+ */
 void  loopMenuSelection2() {
   output = 2;
   if (ButtonNORTH() && !flancsMontants[0] || ButtonSOUTH() && !flancsMontants[0]) {
@@ -231,6 +238,9 @@ void  loopMenuSelection2() {
   }
 }
 
+/*
+ * Gère le menu GO qui marque une pause avant de lancer la partie (affichage 1 et 2 et boutons)
+ */
 void  loopMenuGo() {
   if (millis() % 2000 > 1000) {
     output = 30;// Image 1
@@ -343,6 +353,10 @@ bool ButtonSELECT() {
   return bitRead(dataBuffer[0], SELECT);
 }
 
+/*
+ * Gère la communication avec l'esp32 du groupe manette installé sur le pcb. On commence par réenvoyer les données que l'on possède ce qui fait que l'esp32 nous envoie 
+ * les siennes directement.
+ */
 void communicationManette() {
   uint8_t dataBufferWrite[2] = {output, sonEtVibreur};// réenvoie les données à la manette
   Serial.write(dataBufferWrite, 2);
@@ -356,12 +370,13 @@ void communicationManette() {
 }
 
 /*
-    Elle change l'état actuelle de la variable state et retourne son état actuel
-    Permet de faire d'autres actions sur des variables lors d'un changement d'état directement dans cette fonction si nécessaire
-*/
+ * Elle change l'état actuelle de la variable state et retourne son état actuel.
+ * Permet de faire d'autres actions sur des variables lors d'un changement d'état directement dans cette fonction si nécessaire
+ * Evite de passer par une variable grobale.
+ */
 State setState(State state) {
-  if (currentState == state)return currentState;
-  previousState = currentState;
+  if (currentState == state)return currentState; // Evite de traiter inutilement les données s'il n'y a pas de changement
+  previousState = currentState; // non utilisé car remplacé par le savedMode
   currentState = state;
   return currentState;
 }
