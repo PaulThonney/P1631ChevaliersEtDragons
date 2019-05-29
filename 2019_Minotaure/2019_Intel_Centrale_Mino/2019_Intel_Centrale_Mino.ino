@@ -152,11 +152,14 @@ void loopManuel() {
   
 }
 
+/*
+ * Gère le menu de pause (affichage 1 et boutons)
+ */
 void loopPauseGenerale1() {
-  output = 29;
-  if (ButtonNORTH() && !flancsMontants[0] || ButtonSOUTH() && !flancsMontants[0]) {
+  output = 29; // Info d'affichage pour la manette
+  if (ButtonNORTH() && !flancsMontants[0] || ButtonSOUTH() && !flancsMontants[0]) { // Si on appuie sur le bouton du haut on loop et on arrive en bas
     setState(State::PauseGenerale2);
-    flancsMontants[0] = true;
+    flancsMontants[0] = true; // On est obligé de faire la gestion de flanc dans le code des chevalier car la manette ne nous communique que l'état des boutons
   }
   else if (!ButtonNORTH() && !ButtonSOUTH()) {
     flancsMontants[0] = false;
@@ -170,8 +173,11 @@ void loopPauseGenerale1() {
   }
 }
 
+/*
+ * Gère le menu de pause (affichage 2 et boutons)
+ */
 void loopPauseGenerale2() {
-  output = 30;
+  output = 30; // Info d'affichage pour la manette
   if (ButtonNORTH() && !flancsMontants[0] || ButtonSOUTH() && !flancsMontants[0]) {
     setState(State::PauseGenerale1);
     flancsMontants[0] = true;
@@ -187,6 +193,7 @@ void loopPauseGenerale2() {
     flancsMontants[1] = false;
   }
 }
+
 void  loopMenuSelection1() {
   output = 1;
   if (ButtonNORTH() && !flancsMontants[0] || ButtonSOUTH() && !flancsMontants[0]) {
@@ -197,7 +204,7 @@ void  loopMenuSelection1() {
     flancsMontants[0] = false;
   }
   if (ButtonA() && !flancsMontants[1]) {
-    savedMode = State::Automatique;
+    savedMode = State::Automatique; // Lors du choix d'un mode on le stock pour que le menu pause puisse reprendre sur le bon mode
     setState(State::MenuGO);
     flancsMontants[1] = true;
   }
