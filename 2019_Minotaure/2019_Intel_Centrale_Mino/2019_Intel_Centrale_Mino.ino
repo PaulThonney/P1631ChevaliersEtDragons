@@ -310,11 +310,8 @@ bool ButtonSELECT() {
 bool ButtonFlanc(bool button, int flancId) {
   if (button && !flancsMontants[flancId]) {
     return true;
-    flancsMontants[flancId] = true;
   }
-  else if (!button) {
-    flancsMontants[flancId] = false;
-  }
+  flancsMontants[flancId] = button;
   return false;
 }
 
