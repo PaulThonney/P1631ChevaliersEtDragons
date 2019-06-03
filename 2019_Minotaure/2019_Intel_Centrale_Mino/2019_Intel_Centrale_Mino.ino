@@ -140,77 +140,6 @@ void loopManuel() {
     Wire.write(127);
   }
 }
-/*
-   Change la position du curseur dans les menus à l'aide des touches NORTH et SOUTH
-   Reçoit la taille du menu
-   Retourne la position du curseur (un nombre entre 0 et la taille du menu)
-*/
-int changeCursorPosition(int sizeMenu) {
-
-  if (ButtonFlanc(ButtonNORTH(), 3)) {
-    stateMenuPos++;
-    if (stateMenuPos > sizeMenu) {
-      stateMenuPos = 0;
-    }
-  }
-
-  if (ButtonFlanc(ButtonSOUTH(), 4)) {
-    stateMenuPos--;
-    if (stateMenuPos < 0) {
-      stateMenuPos = sizeMenu;
-    }
-  }
-
-  return stateMenuPos;
-}
-
-void loopPauseGenerale() {
-  int tailleMenu = 2;
-  int pos = changeCursorPosition(tailleMenu);//changement position curseur
-
-  switch (pos) {
-    case 0:
-      output = 12; // Info d'affichage pour la manette
-
-      if (ButtonFlanc(ButtonA(), 1)) {
-        setState(State::MenuGO);
-      }
-      break;
-    case 1:
-      output = 18; // Info d'affichage pour la manette
-
-      if (ButtonFlanc(ButtonA(), 1)) {
-        setState(State::MenuSelection, 0);
-      }
-      break;
-  }
-}
-
-/*
-   Gère le menu général de selection de mode (affichage 1 et boutons)
-
-*/
-void  loopMenuSelection() {
-  int tailleMenu = 2;
-  int pos = changeCursorPosition(tailleMenu);//changement position curseur
-  State selectedMode;
-
-  switch (pos) {
-    case 0:
-      output = 1;
-      selectedMode = State::Automatique;
-      break;
-    case 1:
-      output = 2;
-      selectedMode = State::Manuel;
-      break;
-  }
-
-  if (ButtonFlanc(ButtonA(), 1)) {
-    savedMode = selectedMode; // Lors du choix d'un mode on le stock pour que le menu pause puisse reprendre sur le bon mode
-    setState(State::MenuGO);
-  }
-}
 
 /*
    Fonction qui gère la réception des messages sur le bus I2C central
@@ -259,7 +188,6 @@ bool ButtonY()      {
   return bitRead(dataBuffer[0], Y);
 }
 bool ButtonWEST()   {
-     Serial.println(dataBuffer[1]);
   return bitRead(dataBuffer[1], WEST);
 }
 bool ButtonEAST()   {
@@ -354,5 +282,77 @@ void  loopMenuGo() {
   output = 3;
   if (ButtonFlanc(ButtonA(), 1)) {
     setState(savedMode);
+  }
+}
+
+/*
+   Change la position du curseur dans les menus à l'aide des touches NORTH et SOUTH
+   Reçoit la taille du menu
+   Retourne la position du curseur (un nombre entre 0 et la taille du menu)
+*/
+int changeCursorPosition(int sizeMenu) {
+
+  if (ButtonFlanc(ButtonNORTH(), 3)) {
+    stateMenuPos++;
+    if (stateMenuPos > sizeMenu) {
+      stateMenuPos = 0;
+    }
+  }
+
+  if (ButtonFlanc(ButtonSOUTH(), 4)) {
+    stateMenuPos--;
+    if (stateMenuPos < 0) {
+      stateMenuPos = sizeMenu;
+    }
+  }
+  
+  return stateMenuPos;
+}
+
+void loopPauseGenerale() {
+  int tailleMenu = 2;
+  int pos = changeCursorPosition(tailleMenu);//changement position curseur
+
+  switch (pos) {
+    case 0:
+      output = 12; // Info d'affichage pour la manette
+
+      if (ButtonFlanc(ButtonA(), 1)) {
+        setState(State::MenuGO);
+      }
+      break;
+    case 1:
+      output = 18; // Info d'affichage pour la manette
+
+      if (ButtonFlanc(ButtonA(), 1)) {
+        setState(State::MenuSelection, 0);
+      }
+      break;
+  }
+}
+
+/*
+   Gère le menu général de selection de mode (affichage 1 et boutons)
+
+*/
+void  loopMenuSelection() {
+  int tailleMenu = 2;
+  int pos = changeCursorPosition(tailleMenu);//changement position curseur
+  State selectedMode;
+
+  switch (pos) {
+    case 0:
+      output = 1;
+      selectedMode = State::Automatique;
+      break;
+    case 1:
+      output = 2;
+      selectedMode = State::Manuel;
+      break;
+  }
+
+  if (ButtonFlanc(ButtonA(), 1)) {
+    savedMode = selectedMode; // Lors du choix d'un mode on le stock pour que le menu pause puisse reprendre sur le bon mode
+    setState(State::MenuGO);
   }
 }
