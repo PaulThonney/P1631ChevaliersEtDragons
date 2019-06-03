@@ -107,7 +107,7 @@ void loopAutomatique() {
     return;
   }
   output = 4;
-  Wire.write(ADRESSE_ROUE);
+  Wire.beginTransmission(ADRESSE_ROUE);
   Wire.write(anglePixy);
 }
 
@@ -120,13 +120,7 @@ void loopManuel() {
     return;
   }
   output = 27;
-  if (ButtonWEST()){
-    digitalWrite(43, HIGH);
-  }
-  else{
-    digitalWrite(43, LOW);
-  }
-  Wire.write(ADRESSE_ROUE);
+  Wire.beginTransmission(ADRESSE_ROUE);
   if (AxisLX() >= 132 || AxisLX() <= 122) {
     Wire.write(AxisLX());
   }
@@ -139,6 +133,7 @@ void loopManuel() {
   else {
     Wire.write(127);
   }
+  Wire.endTransmission();
 }
 
 /*
