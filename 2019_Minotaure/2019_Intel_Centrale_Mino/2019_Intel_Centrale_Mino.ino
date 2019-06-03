@@ -61,6 +61,8 @@ State savedMode = State::Automatique;
 State currentState = State::MenuSelection1; // On démarre sur le menu de sélection
 State previousState; // Ancien état
 
+int stateMenuPos = 0; // Position du curseur
+
 void setup()
 {
   Wire.begin(INTEL);
@@ -119,8 +121,10 @@ void loop()
 }
 
 /*
- * Gère la pause lors de la partie
- */
+   Vérifie s'il y a une pause lors de la partie
+   Retourne vrai si en pause
+   Retourne faux si pas en pause
+*/
 bool checkPause() {
   if (ButtonB() && !flancsMontants[2]) {
     setState(State::PauseGenerale1);
@@ -137,7 +141,7 @@ bool checkPause() {
    Fonction qui gère le mode automatique des robots
 */
 void loopAutomatique() {
-  if(checkPause()){ // quitte directement la loop si la pause est pressée et évite que le "state" puisse être changé dans la fonction
+  if (checkPause()) { // quitte directement la loop si la pause est pressée et évite que le "state" puisse être changé dans la fonction
     return;
   }
 }
@@ -146,15 +150,15 @@ void loopAutomatique() {
    Fonction qui gère le mode manuel des robots
 */
 void loopManuel() {
-  if(checkPause()){// quitte directement la loop si la pause est pressée et évite que le "state" puisse être changé dans la fonction
+  if (checkPause()) { // quitte directement la loop si la pause est pressée et évite que le "state" puisse être changé dans la fonction
     return;
   }
-  
+
 }
 
 /*
- * Gère le menu de pause (affichage 1 et boutons)
- */
+   Gère le menu de pause (affichage 1 et boutons)
+*/
 void loopPauseGenerale1() {
   output = 29; // Info d'affichage pour la manette
   if (ButtonNORTH() && !flancsMontants[0] || ButtonSOUTH() && !flancsMontants[0]) { // Si on appuie sur le bouton du haut on loop et on arrive en bas
@@ -174,8 +178,8 @@ void loopPauseGenerale1() {
 }
 
 /*
- * Gère le menu de pause (affichage 2 et boutons)
- */
+   Gère le menu de pause (affichage 2 et boutons)
+*/
 void loopPauseGenerale2() {
   output = 30; // Info d'affichage pour la manette
   if (ButtonNORTH() && !flancsMontants[0] || ButtonSOUTH() && !flancsMontants[0]) {
@@ -195,8 +199,8 @@ void loopPauseGenerale2() {
 }
 
 /*
- * Gère le menu général de selection de mode (affichage 1 et boutons)
- */
+   Gère le menu général de selection de mode (affichage 1 et boutons)
+*/
 void  loopMenuSelection1() {
   output = 1;
   if (ButtonNORTH() && !flancsMontants[0] || ButtonSOUTH() && !flancsMontants[0]) {
@@ -217,8 +221,8 @@ void  loopMenuSelection1() {
 }
 
 /*
- * Gère le menu général de selection de mode (affichage 2 et boutons)
- */
+   Gère le menu général de selection de mode (affichage 2 et boutons)
+*/
 void  loopMenuSelection2() {
   output = 2;
   if (ButtonNORTH() && !flancsMontants[0] || ButtonSOUTH() && !flancsMontants[0]) {
@@ -239,8 +243,8 @@ void  loopMenuSelection2() {
 }
 
 /*
- * Gère le menu GO qui marque une pause avant de lancer la partie (affichage 1 et 2 et boutons)
- */
+   Gère le menu GO qui marque une pause avant de lancer la partie (affichage 1 et 2 et boutons)
+*/
 void  loopMenuGo() {
   if (millis() % 2000 > 1000) {
     output = 30;// Image 1
@@ -354,9 +358,9 @@ bool ButtonSELECT() {
 }
 
 /*
- * Gère la communication avec l'esp32 du groupe manette installé sur le pcb. On commence par réenvoyer les données que l'on possède ce qui fait que l'esp32 nous envoie 
- * les siennes directement.
- */
+   Gère la communication avec l'esp32 du groupe manette installé sur le pcb. On commence par réenvoyer les données que l'on possède ce qui fait que l'esp32 nous envoie
+   les siennes directement.
+*/
 void communicationManette() {
   uint8_t dataBufferWrite[2] = {output, sonEtVibreur};// réenvoie les données à la manette
   Serial.write(dataBufferWrite, 2);
@@ -370,11 +374,12 @@ void communicationManette() {
 }
 
 /*
- * Elle change l'état actuelle de la variable state et retourne son état actuel.
- * Permet de faire d'autres actions sur des variables lors d'un changement d'état directement dans cette fonction si nécessaire
- * Evite de passer par une variable grobale.
- */
-State setState(State state) {
+   Elle change l'état actuelle de la variable state et retourne son état actuel.
+   Permet de faire d'autres actions sur des variables lors d'un changement d'état directement dans cette fonction si nécessaire
+   Evite de passer par une variable grobale.
+*/
+State setState(State state, int menuPos = 0) {
+  stateMenuPos = menuPos;
   if (currentState == state)return currentState; // Evite de traiter inutilement les données s'il n'y a pas de changement
   previousState = currentState; // non utilisé car remplacé par le savedMode
   currentState = state;
