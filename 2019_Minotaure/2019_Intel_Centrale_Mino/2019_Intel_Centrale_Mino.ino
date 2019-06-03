@@ -152,11 +152,14 @@ void loopManuel() {
   
 }
 
+/*
+ * Gère le menu de pause (affichage 1 et boutons)
+ */
 void loopPauseGenerale1() {
-  output = 29;
-  if (ButtonNORTH() && !flancsMontants[0] || ButtonSOUTH() && !flancsMontants[0]) {
+  output = 29; // Info d'affichage pour la manette
+  if (ButtonNORTH() && !flancsMontants[0] || ButtonSOUTH() && !flancsMontants[0]) { // Si on appuie sur le bouton du haut on loop et on arrive en bas
     setState(State::PauseGenerale2);
-    flancsMontants[0] = true;
+    flancsMontants[0] = true; // On est obligé de faire la gestion de flanc dans le code des chevalier car la manette ne nous communique que l'état des boutons
   }
   else if (!ButtonNORTH() && !ButtonSOUTH()) {
     flancsMontants[0] = false;
@@ -170,8 +173,11 @@ void loopPauseGenerale1() {
   }
 }
 
+/*
+ * Gère le menu de pause (affichage 2 et boutons)
+ */
 void loopPauseGenerale2() {
-  output = 30;
+  output = 30; // Info d'affichage pour la manette
   if (ButtonNORTH() && !flancsMontants[0] || ButtonSOUTH() && !flancsMontants[0]) {
     setState(State::PauseGenerale1);
     flancsMontants[0] = true;
@@ -187,6 +193,10 @@ void loopPauseGenerale2() {
     flancsMontants[1] = false;
   }
 }
+
+/*
+ * Gère le menu général de selection de mode (affichage 1 et boutons)
+ */
 void  loopMenuSelection1() {
   output = 1;
   if (ButtonNORTH() && !flancsMontants[0] || ButtonSOUTH() && !flancsMontants[0]) {
@@ -197,7 +207,7 @@ void  loopMenuSelection1() {
     flancsMontants[0] = false;
   }
   if (ButtonA() && !flancsMontants[1]) {
-    savedMode = State::Automatique;
+    savedMode = State::Automatique; // Lors du choix d'un mode on le stock pour que le menu pause puisse reprendre sur le bon mode
     setState(State::MenuGO);
     flancsMontants[1] = true;
   }
@@ -205,6 +215,10 @@ void  loopMenuSelection1() {
     flancsMontants[1] = false;
   }
 }
+
+/*
+ * Gère le menu général de selection de mode (affichage 2 et boutons)
+ */
 void  loopMenuSelection2() {
   output = 2;
   if (ButtonNORTH() && !flancsMontants[0] || ButtonSOUTH() && !flancsMontants[0]) {
@@ -224,6 +238,9 @@ void  loopMenuSelection2() {
   }
 }
 
+/*
+ * Gère le menu GO qui marque une pause avant de lancer la partie (affichage 1 et 2 et boutons)
+ */
 void  loopMenuGo() {
   if (millis() % 2000 > 1000) {
     output = 30;// Image 1
@@ -336,6 +353,10 @@ bool ButtonSELECT() {
   return bitRead(dataBuffer[0], SELECT);
 }
 
+/*
+ * Gère la communication avec l'esp32 du groupe manette installé sur le pcb. On commence par réenvoyer les données que l'on possède ce qui fait que l'esp32 nous envoie 
+ * les siennes directement.
+ */
 void communicationManette() {
   uint8_t dataBufferWrite[2] = {output, sonEtVibreur};// réenvoie les données à la manette
   Serial.write(dataBufferWrite, 2);
@@ -349,12 +370,13 @@ void communicationManette() {
 }
 
 /*
-    Elle change l'état actuelle de la variable state et retourne son état actuel
-    Permet de faire d'autres actions sur des variables lors d'un changement d'état directement dans cette fonction si nécessaire
-*/
+ * Elle change l'état actuelle de la variable state et retourne son état actuel.
+ * Permet de faire d'autres actions sur des variables lors d'un changement d'état directement dans cette fonction si nécessaire
+ * Evite de passer par une variable grobale.
+ */
 State setState(State state) {
-  if (currentState == state)return currentState;
-  previousState = currentState;
+  if (currentState == state)return currentState; // Evite de traiter inutilement les données s'il n'y a pas de changement
+  previousState = currentState; // non utilisé car remplacé par le savedMode
   currentState = state;
   return currentState;
 }
