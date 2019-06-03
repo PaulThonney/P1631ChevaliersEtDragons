@@ -64,7 +64,9 @@ int stateMenuPos = 0; // Position du curseur
 void setup() {
   Wire.begin(ADRESSE_INTELLIGENCE_CENTRALE);
   Wire.onReceive(receiveEvent);
-  Serial.begin(115200, SERIAL_8N1);
+  Serial2.begin(115200);
+  Serial.begin(115200);
+  Serial.println("hellolespelos");
 }
 
 void loop() {
@@ -117,6 +119,7 @@ void loopAutomatique() {
   if (checkPause()) { // quitte directement la loop si la pause est pressée et évite que le "state" puisse être changé dans la fonction
     return;
   }
+  output = 4;
   Wire.write(ADRESSE_ROUE);
   Wire.write(anglePixy);
 }
@@ -129,14 +132,15 @@ void loopManuel() {
   if (checkPause()) { // quitte directement la loop si la pause est pressée et évite que le "state" puisse être changé dans la fonction
     return;
   }
+  output = 27;
   Wire.write(ADRESSE_ROUE);
-  if (AxisLX() >= 132 || AxisLX <= 122) {
+  if (AxisLX() >= 132 || AxisLX() <= 122) {
     Wire.write(AxisLX());
   }
   else {
     Wire.write(127);
   }
-  if (AxisLY() >= 132 || AxisLY <= 122) {
+  if (AxisLY() >= 132 || AxisLY() <= 122) {
     Wire.write(AxisLY());
   }
   else {
@@ -241,22 +245,23 @@ void receiveEvent(int howMany) {
     Les fonctions suivantes permettent de récupèrer l'état de n'importe quel bouton/joystick plus loin dans le code
 */
 byte AxisLX()       {
-  return dataBuffer[2];
-}
-byte AxisLY()       {
-  return dataBuffer[3];
-}
-byte AxisRX()       {
+  Serial.println(dataBuffer[4]);
   return dataBuffer[4];
 }
-byte AxisRY()       {
+byte AxisLY()       {
   return dataBuffer[5];
 }
-byte AxisLT()       {
+byte AxisRX()       {
   return dataBuffer[6];
 }
-byte AxisRT()       {
+byte AxisRY()       {
   return dataBuffer[7];
+}
+byte AxisLT()       {
+  return dataBuffer[2];
+}
+byte AxisRT()       {
+  return dataBuffer[3];
 }
 
 bool ButtonA()      {
@@ -308,11 +313,12 @@ bool ButtonSELECT() {
    Retourne faux si l'état est le même que précédemment
 */
 bool ButtonFlanc(bool button, int flancId) {
+  bool temp = false;
   if (button && !flancsMontants[flancId]) {
-    return true;
+    temp = true;
   }
   flancsMontants[flancId] = button;
-  return false;
+  return temp;
 }
 
 /*
@@ -321,10 +327,11 @@ bool ButtonFlanc(bool button, int flancId) {
 */
 void communicationManette() {
   uint8_t dataBufferWrite[2] = {output, sonEtVibreur};// réenvoie les données à la manette
-  Serial.write(dataBufferWrite, 2);
-  while (Serial.available() < 8) { // controlle la longueure de la tramme et si elle ne correspond pas il quitte et remet à zero les buffers de boutons
+  Serial2.write(dataBufferWrite, 2);
+  while (Serial2.available() < 8) { // controlle la longueure de la tramme et si elle ne correspond pas il quitte et remet à zero les buffers de boutons
+    //Serial.print("#");
   }
-  Serial.readBytes(dataBuffer, BUFFER_SIZE); //lit les infos en provenance de la manette
+  Serial2.readBytes(dataBuffer, BUFFER_SIZE); //lit les infos en provenance de la manette
 }
 
 /*
