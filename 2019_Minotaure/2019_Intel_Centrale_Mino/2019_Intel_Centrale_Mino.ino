@@ -40,7 +40,7 @@
 
 byte dataBuffer[BUFFER_SIZE];
 byte output = 0;
-bool flancsMontants[] = {false, false, false}; //0: SOUTH & NORTH; 1: A; 2: B
+bool flancsMontants[] = {false, false, false, false, false}; //0: null; 1: A; 2: B, 3: NORTH, 4: SOUTH
 byte vie = 3;// Variable qui indique le nombre de vie restante
 int message;//adresse du capteur qui lui parle
 byte anglePixy;
@@ -49,72 +49,48 @@ byte sonEtVibreur; //4 premiers bits: buzzer; 4 derniers bits: vibreur
 typedef enum State { // On définit les états possible de la machine
   Automatique,
   Manuel,
-  PauseGenerale1,
-  PauseGenerale2,
-  MenuSelection1,
-  MenuSelection2,
+  PauseGenerale,
+  MenuSelection,
   MenuGO,
 } State;
 
-
+State setState(State state, int menuPos = 0);
 State savedMode = State::Automatique;
-State currentState = State::MenuSelection1; // On démarre sur le menu de sélection
+State currentState = State::MenuSelection; // On démarre sur le menu de sélection
 State previousState; // Ancien état
 
 int stateMenuPos = 0; // Position du curseur
 
-void setup()
-{
+void setup() {
   Wire.begin(INTEL);
   Wire.onReceive(receiveEvent);
   Serial.begin(115200, SERIAL_8N1);
 }
 
-void loop()
-{
+void loop() {
   communicationManette(); // On commence par communiquer les dernières infos avec la manette
 
   switch (currentState) {
     case State::Automatique: { // Mode automatique du robot
-
         loopAutomatique();
-
         break;
       }
     case State::Manuel: { // Mode manuel du robot
         loopManuel();
-
         break;
       }
-    case State::PauseGenerale1: { // Mode pause avec curseur sur "Reprendre"
-
-        loopPauseGenerale1();
-
-        break;
-      }
-    case State::PauseGenerale2: { // Mode pause avec curseur sur "Menu Principal"
-
-        loopPauseGenerale2();
-
-        break;
-      }
-    case State::MenuSelection1: { // Mode menu principal avec curseur sur "Automatique"
-
-        loopMenuSelection1();
-
+    case State::PauseGenerale: { // Mode pause avec curseur sur "Reprendre"
+        loopPauseGenerale();
         break;
       }
 
-    case State::MenuSelection2: { // Mode menu principal avec curseur sur "Manuel"
-
-        loopMenuSelection2();
-
+    case State::MenuSelection: { // Mode menu principal avec curseur sur "Automatique"
+        loopMenuSelection();
         break;
       }
+
     case State::MenuGO: { // Mode MenuGo avec affichage d'un logo "GO"
-
         loopMenuGo();
-
         break;
       }
   }
@@ -126,13 +102,9 @@ void loop()
    Retourne faux si pas en pause
 */
 bool checkPause() {
-  if (ButtonB() && !flancsMontants[2]) {
-    setState(State::PauseGenerale1);
-    flancsMontants[2] = true;
+  if (ButtonFlanc(ButtonB(), 2)) {
+    setState(State::PauseGenerale, 0);
     return true;
-  }
-  else if (!ButtonB()) {
-    flancsMontants[2] = false;
   }
   return false;
 }
@@ -153,92 +125,69 @@ void loopManuel() {
   if (checkPause()) { // quitte directement la loop si la pause est pressée et évite que le "state" puisse être changé dans la fonction
     return;
   }
-
 }
 
-/*
-   Gère le menu de pause (affichage 1 et boutons)
-*/
-void loopPauseGenerale1() {
-  output = 29; // Info d'affichage pour la manette
-  if (ButtonNORTH() && !flancsMontants[0] || ButtonSOUTH() && !flancsMontants[0]) { // Si on appuie sur le bouton du haut on loop et on arrive en bas
-    setState(State::PauseGenerale2);
-    flancsMontants[0] = true; // On est obligé de faire la gestion de flanc dans le code des chevalier car la manette ne nous communique que l'état des boutons
+int changeCursorPosition(int sizeMenu) {
+
+  if (ButtonFlanc(ButtonNORTH(), 3)) {
+    stateMenuPos++;
+    if (stateMenuPos > sizeMenu) {
+      stateMenuPos = 0;
+    }
   }
-  else if (!ButtonNORTH() && !ButtonSOUTH()) {
-    flancsMontants[0] = false;
+
+  if (ButtonFlanc(ButtonSOUTH(), 4)) {
+    stateMenuPos--;
+    if (stateMenuPos < 0) {
+      stateMenuPos = sizeMenu;
+    }
   }
-  if (ButtonA() && !flancsMontants[1]) {
-    setState(State::MenuGO);
-    flancsMontants[1] = true;
-  }
-  else if (!ButtonA()) {
-    flancsMontants[1] = false;
-  }
+
+  return stateMenuPos;
 }
 
-/*
-   Gère le menu de pause (affichage 2 et boutons)
-*/
-void loopPauseGenerale2() {
-  output = 30; // Info d'affichage pour la manette
-  if (ButtonNORTH() && !flancsMontants[0] || ButtonSOUTH() && !flancsMontants[0]) {
-    setState(State::PauseGenerale1);
-    flancsMontants[0] = true;
-  }
-  else if (!ButtonNORTH() && !ButtonSOUTH()) {
-    flancsMontants[0] = false;
-  }
-  if (ButtonA() && !flancsMontants[1]) {
-    setState(State::MenuSelection1);
-    flancsMontants[1] = true;
-  }
-  else if (!ButtonA()) {
-    flancsMontants[1] = false;
+void loopPauseGenerale() {
+  int pos = changeCursorPosition(2);//changement position curseur
+
+  switch (pos) {
+    case 0:
+      output = 29; // Info d'affichage pour la manette
+
+      if (ButtonFlanc(ButtonA(), 1)) {
+        setState(State::MenuGO);
+      }
+      break;
+    case 1:
+      output = 30; // Info d'affichage pour la manette
+
+      if (ButtonFlanc(ButtonA(), 1)) {
+        setState(State::MenuSelection, 0);
+      }
+      break;
   }
 }
 
 /*
    Gère le menu général de selection de mode (affichage 1 et boutons)
 */
-void  loopMenuSelection1() {
-  output = 1;
-  if (ButtonNORTH() && !flancsMontants[0] || ButtonSOUTH() && !flancsMontants[0]) {
-    setState(State::MenuSelection2);
-    flancsMontants[0] = true;
-  }
-  else if (!ButtonNORTH() && !ButtonSOUTH()) {
-    flancsMontants[0] = false;
-  }
-  if (ButtonA() && !flancsMontants[1]) {
-    savedMode = State::Automatique; // Lors du choix d'un mode on le stock pour que le menu pause puisse reprendre sur le bon mode
-    setState(State::MenuGO);
-    flancsMontants[1] = true;
-  }
-  else if (!ButtonA()) {
-    flancsMontants[1] = false;
-  }
-}
+void  loopMenuSelection() {
+  int pos = changeCursorPosition(2);//changement position curseur
+  State selectedMode;
 
-/*
-   Gère le menu général de selection de mode (affichage 2 et boutons)
-*/
-void  loopMenuSelection2() {
-  output = 2;
-  if (ButtonNORTH() && !flancsMontants[0] || ButtonSOUTH() && !flancsMontants[0]) {
-    setState(State::MenuSelection1);
-    flancsMontants[0] = true;
+  switch (pos) {
+    case 0:
+      output = 2;
+      selectedMode = State::Automatique;
+      break;
+    case 1:
+      output = 2;
+      selectedMode = State::Manuel;
+      break;
   }
-  else if (!ButtonNORTH() && !ButtonSOUTH()) {
-    flancsMontants[0] = false;
-  }
-  if (ButtonA() && !flancsMontants[1]) {
-    savedMode = State::Manuel;
+
+  if (ButtonFlanc(ButtonA(), 1)) {
+    savedMode = selectedMode; // Lors du choix d'un mode on le stock pour que le menu pause puisse reprendre sur le bon mode
     setState(State::MenuGO);
-    flancsMontants[1] = true;
-  }
-  else if (!ButtonA()) {
-    flancsMontants[1] = false;
   }
 }
 
@@ -252,12 +201,8 @@ void  loopMenuGo() {
     output = 30;// Image 2
   }
 
-  if (ButtonA() && !flancsMontants[1]) {
+  if (ButtonFlanc(ButtonA(), 1)) {
     setState(savedMode);
-    flancsMontants[1] = true;
-  }
-  else if (!ButtonA()) {
-    flancsMontants[1] = false;
   }
 }
 
@@ -275,86 +220,37 @@ void receiveEvent(int howMany) {
 /*
     Les fonctions suivantes permettent de récupèrer l'état de n'importe quel bouton/joystick plus loin dans le code
 */
-byte AxisLX() {
-  return dataBuffer[2];
+byte AxisLX()       {return dataBuffer[2];}
+byte AxisLY()       {return dataBuffer[3];}
+byte AxisRX()       {return dataBuffer[4];}
+byte AxisRY()       {return dataBuffer[5];}
+byte AxisLT()       {return dataBuffer[6];}
+byte AxisRT()       {return dataBuffer[7];}
 
-}
+bool ButtonA()      {return bitRead(dataBuffer[0], A);}
+bool ButtonB()      {return bitRead(dataBuffer[0], B);}
+bool ButtonX()      {return bitRead(dataBuffer[0], X);}
+bool ButtonY()      {return bitRead(dataBuffer[0], Y);}
+bool ButtonWEST()   {return bitRead(dataBuffer[1], WEST);}
+bool ButtonEAST()   {return bitRead(dataBuffer[1], EAST);}
+bool ButtonNORTH()  {return bitRead(dataBuffer[1], NORTH);}
+bool ButtonSOUTH()  {return bitRead(dataBuffer[1], SOUTH);}
+bool ButtonLB()     {return bitRead(dataBuffer[0], LB);}
+bool ButtonRB()     {return bitRead(dataBuffer[0], RB);}
+bool ButtonLS()     {return bitRead(dataBuffer[0], LS);}
+bool ButtonRS()     {return bitRead(dataBuffer[0], RS);}
+bool ButtonSTART()  {return bitRead(dataBuffer[0], START);}
+bool ButtonSELECT() {return bitRead(dataBuffer[0], SELECT);}
 
-byte AxisLY() {
-  return dataBuffer[3];
-}
-
-byte AxisRX() {
-  return dataBuffer[4];
-}
-
-byte AxisRY() {
-  return dataBuffer[5];
-}
-
-byte AxisLT() {
-  return dataBuffer[6];
-}
-
-byte AxisRT() {
-  return dataBuffer[7];
-}
-
-bool ButtonA() {
-  return bitRead(dataBuffer[0], A);
-}
-
-bool ButtonB() {
-  return bitRead(dataBuffer[0], B);
-}
-
-bool ButtonX() {
-  return bitRead(dataBuffer[0], X);
-}
-
-bool ButtonY() {
-  return bitRead(dataBuffer[0], Y);
-}
-
-bool ButtonWEST() {
-  return bitRead(dataBuffer[1], WEST);
-}
-
-bool ButtonEAST() {
-  return bitRead(dataBuffer[1], EAST);
-}
-
-bool ButtonNORTH() {
-  return bitRead(dataBuffer[1], NORTH);
-}
-
-bool ButtonSOUTH() {
-  return bitRead(dataBuffer[1], SOUTH);
-}
-
-bool ButtonLB() {
-  return bitRead(dataBuffer[0], LB);
-}
-
-bool ButtonRB() {
-  return bitRead(dataBuffer[0], RB);
-}
-
-bool ButtonLS() {
-  return bitRead(dataBuffer[0], LS);
-}
-
-bool ButtonRS() {
-  return bitRead(dataBuffer[0], RS);
-}
-
-bool ButtonSTART() {
-  return bitRead(dataBuffer[0], START);
-}
-
-bool ButtonSELECT() {
-
-  return bitRead(dataBuffer[0], SELECT);
+bool ButtonFlanc(bool button, int flancId) {
+  if (button && !flancsMontants[flancId]) {
+    return true;
+    flancsMontants[flancId] = true;
+  }
+  else if (!button) {
+    flancsMontants[flancId] = false;
+  }
+  return false;
 }
 
 /*
