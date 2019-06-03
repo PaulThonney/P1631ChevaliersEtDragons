@@ -99,19 +99,6 @@ void loop() {
 }
 
 /*
-   Vérifie s'il y a une demande de pause lors de la partie
-   Retourne vrai si il y a demande de pause
-   Retourne faux si pas demande de pause
-*/
-bool checkPause() {
-  if (ButtonFlanc(ButtonB(), 2)) {
-    setState(State::PauseGenerale, 0);
-    return true;
-  }
-  return false;
-}
-
-/*
    Fonction qui gère le mode automatique des robots
    Pour le moment elle récupère uniquement l'angle du servo et le transmet aux roues.
 */
@@ -133,6 +120,12 @@ void loopManuel() {
     return;
   }
   output = 27;
+  if (ButtonWEST()){
+    digitalWrite(43, HIGH);
+  }
+  else{
+    digitalWrite(43, LOW);
+  }
   Wire.write(ADRESSE_ROUE);
   if (AxisLX() >= 132 || AxisLX() <= 122) {
     Wire.write(AxisLX());
@@ -220,16 +213,6 @@ void  loopMenuSelection() {
 }
 
 /*
-   Gère le menu GO qui marque une pause avant de lancer la partie (affichage 1 et 2 et boutons)
-*/
-void  loopMenuGo() {
-  output = 3;
-  if (ButtonFlanc(ButtonA(), 1)) {
-    setState(savedMode);
-  }
-}
-
-/*
    Fonction qui gère la réception des messages sur le bus I2C central
 
 */
@@ -245,7 +228,6 @@ void receiveEvent(int howMany) {
     Les fonctions suivantes permettent de récupèrer l'état de n'importe quel bouton/joystick plus loin dans le code
 */
 byte AxisLX()       {
-  Serial.println(dataBuffer[4]);
   return dataBuffer[4];
 }
 byte AxisLY()       {
@@ -277,6 +259,7 @@ bool ButtonY()      {
   return bitRead(dataBuffer[0], Y);
 }
 bool ButtonWEST()   {
+     Serial.println(dataBuffer[1]);
   return bitRead(dataBuffer[1], WEST);
 }
 bool ButtonEAST()   {
@@ -349,4 +332,27 @@ State setState(State state, int menuPos = -1) {
   //previousState = currentState; // non utilisé car remplacé par le savedMode
   currentState = state;
   return currentState;
+}
+
+/*
+   Vérifie s'il y a une demande de pause lors de la partie
+   Retourne vrai si il y a demande de pause
+   Retourne faux si pas demande de pause
+*/
+bool checkPause() {
+  if (ButtonFlanc(ButtonB(), 2)) {
+    setState(State::PauseGenerale, 0);
+    return true;
+  }
+  return false;
+}
+
+/*
+   Gère le menu GO qui marque une pause avant de lancer la partie (affichage 1 et 2 et boutons)
+*/
+void  loopMenuGo() {
+  output = 3;
+  if (ButtonFlanc(ButtonA(), 1)) {
+    setState(savedMode);
+  }
 }
