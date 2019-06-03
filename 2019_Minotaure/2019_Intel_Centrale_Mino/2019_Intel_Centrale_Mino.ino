@@ -15,7 +15,7 @@
 
 #define CONTACT 2  //  PCB HMI, Nano se trouvant à gauche lorsqu'on regarde le U depuis sa base. Il gère les plaque de contact et les LED
 
-#define ROUES 19// PCB Puissance, "Arduino 2" Nano
+#define ADRESSE_ROUE 19// PCB Puissance, "Arduino 2" Nano
 
 #define TRAQUAGE_AR // Arduino Nano se trouvant sur le PCB traquage_AR (pcb du haut de la tête) il gère la fumée
 
@@ -54,7 +54,7 @@ typedef enum State { // On définit les états possible de la machine
   MenuGO,
 } State;
 
-State setState(State state, int menuPos = 0);
+State setState(State state, int menuPos = -1);
 State savedMode = State::Automatique;
 State currentState = State::MenuSelection; // On démarre sur le menu de sélection
 State previousState; // Ancien état
@@ -79,17 +79,17 @@ void loop() {
         loopManuel();
         break;
       }
-    case State::PauseGenerale: { // Mode pause avec curseur sur "Reprendre"
+    case State::PauseGenerale: { // mode menu de pause
         loopPauseGenerale();
         break;
       }
 
-    case State::MenuSelection: { // Mode menu principal avec curseur sur "Automatique"
+    case State::MenuSelection: { // Mode menu principal
         loopMenuSelection();
         break;
       }
 
-    case State::MenuGO: { // Mode MenuGo avec affichage d'un logo "GO"
+    case State::MenuGO: { // Mode MenuGo
         loopMenuGo();
         break;
       }
@@ -97,9 +97,9 @@ void loop() {
 }
 
 /*
-   Vérifie s'il y a une pause lors de la partie
-   Retourne vrai si en pause
-   Retourne faux si pas en pause
+   Vérifie s'il y a une demande de pause lors de la partie
+   Retourne vrai si il y a demande de pause
+   Retourne faux si pas demande de pause
 */
 bool checkPause() {
   if (ButtonFlanc(ButtonB(), 2)) {
@@ -125,8 +125,25 @@ void loopManuel() {
   if (checkPause()) { // quitte directement la loop si la pause est pressée et évite que le "state" puisse être changé dans la fonction
     return;
   }
+  Wire.write(ADRESSE_ROUE);
+  if (AxisLX() >= 132 || AxisLX <= 122) {
+    Wire.write(AxisLX());
+  }
+  else {
+    Wire.write(127);
+  }
+  if (AxisLY() >= 132 || AxisLY <= 122) {
+    Wire.write(AxisLY());
+  }
+  else {
+    Wire.write(127);
+  }
 }
-
+/*
+   Change la position du curseur dans les menus à l'aide des touches NORTH et SOUTH
+   Reçoit la taille du menu
+   Retourne la position du curseur (un nombre entre 0 et la taille du menu)
+*/
 int changeCursorPosition(int sizeMenu) {
 
   if (ButtonFlanc(ButtonNORTH(), 3)) {
@@ -147,18 +164,19 @@ int changeCursorPosition(int sizeMenu) {
 }
 
 void loopPauseGenerale() {
-  int pos = changeCursorPosition(2);//changement position curseur
+  int tailleMenu = 2;
+  int pos = changeCursorPosition(tailleMenu);//changement position curseur
 
   switch (pos) {
     case 0:
-      output = 29; // Info d'affichage pour la manette
+      output = 12; // Info d'affichage pour la manette
 
       if (ButtonFlanc(ButtonA(), 1)) {
         setState(State::MenuGO);
       }
       break;
     case 1:
-      output = 30; // Info d'affichage pour la manette
+      output = 18; // Info d'affichage pour la manette
 
       if (ButtonFlanc(ButtonA(), 1)) {
         setState(State::MenuSelection, 0);
@@ -169,14 +187,16 @@ void loopPauseGenerale() {
 
 /*
    Gère le menu général de selection de mode (affichage 1 et boutons)
+
 */
 void  loopMenuSelection() {
-  int pos = changeCursorPosition(2);//changement position curseur
+  int tailleMenu = 2;
+  int pos = changeCursorPosition(tailleMenu);//changement position curseur
   State selectedMode;
 
   switch (pos) {
     case 0:
-      output = 2;
+      output = 1;
       selectedMode = State::Automatique;
       break;
     case 1:
@@ -195,12 +215,7 @@ void  loopMenuSelection() {
    Gère le menu GO qui marque une pause avant de lancer la partie (affichage 1 et 2 et boutons)
 */
 void  loopMenuGo() {
-  if (millis() % 2000 > 1000) {
-    output = 30;// Image 1
-  } else {
-    output = 30;// Image 2
-  }
-
+  output = 3;
   if (ButtonFlanc(ButtonA(), 1)) {
     setState(savedMode);
   }
@@ -208,6 +223,7 @@ void  loopMenuGo() {
 
 /*
    Fonction qui gère la réception des messages sur le bus I2C central
+
 */
 void receiveEvent(int howMany) {
   message = (uint8_t)Wire.read();
@@ -220,28 +236,73 @@ void receiveEvent(int howMany) {
 /*
     Les fonctions suivantes permettent de récupèrer l'état de n'importe quel bouton/joystick plus loin dans le code
 */
-byte AxisLX()       {return dataBuffer[2];}
-byte AxisLY()       {return dataBuffer[3];}
-byte AxisRX()       {return dataBuffer[4];}
-byte AxisRY()       {return dataBuffer[5];}
-byte AxisLT()       {return dataBuffer[6];}
-byte AxisRT()       {return dataBuffer[7];}
+byte AxisLX()       {
+  return dataBuffer[2];
+}
+byte AxisLY()       {
+  return dataBuffer[3];
+}
+byte AxisRX()       {
+  return dataBuffer[4];
+}
+byte AxisRY()       {
+  return dataBuffer[5];
+}
+byte AxisLT()       {
+  return dataBuffer[6];
+}
+byte AxisRT()       {
+  return dataBuffer[7];
+}
 
-bool ButtonA()      {return bitRead(dataBuffer[0], A);}
-bool ButtonB()      {return bitRead(dataBuffer[0], B);}
-bool ButtonX()      {return bitRead(dataBuffer[0], X);}
-bool ButtonY()      {return bitRead(dataBuffer[0], Y);}
-bool ButtonWEST()   {return bitRead(dataBuffer[1], WEST);}
-bool ButtonEAST()   {return bitRead(dataBuffer[1], EAST);}
-bool ButtonNORTH()  {return bitRead(dataBuffer[1], NORTH);}
-bool ButtonSOUTH()  {return bitRead(dataBuffer[1], SOUTH);}
-bool ButtonLB()     {return bitRead(dataBuffer[0], LB);}
-bool ButtonRB()     {return bitRead(dataBuffer[0], RB);}
-bool ButtonLS()     {return bitRead(dataBuffer[0], LS);}
-bool ButtonRS()     {return bitRead(dataBuffer[0], RS);}
-bool ButtonSTART()  {return bitRead(dataBuffer[0], START);}
-bool ButtonSELECT() {return bitRead(dataBuffer[0], SELECT);}
-
+bool ButtonA()      {
+  return bitRead(dataBuffer[0], A);
+}
+bool ButtonB()      {
+  return bitRead(dataBuffer[0], B);
+}
+bool ButtonX()      {
+  return bitRead(dataBuffer[0], X);
+}
+bool ButtonY()      {
+  return bitRead(dataBuffer[0], Y);
+}
+bool ButtonWEST()   {
+  return bitRead(dataBuffer[1], WEST);
+}
+bool ButtonEAST()   {
+  return bitRead(dataBuffer[1], EAST);
+}
+bool ButtonNORTH()  {
+  return bitRead(dataBuffer[1], NORTH);
+}
+bool ButtonSOUTH()  {
+  return bitRead(dataBuffer[1], SOUTH);
+}
+bool ButtonLB()     {
+  return bitRead(dataBuffer[0], LB);
+}
+bool ButtonRB()     {
+  return bitRead(dataBuffer[0], RB);
+}
+bool ButtonLS()     {
+  return bitRead(dataBuffer[0], LS);
+}
+bool ButtonRS()     {
+  return bitRead(dataBuffer[0], RS);
+}
+bool ButtonSTART()  {
+  return bitRead(dataBuffer[0], START);
+}
+bool ButtonSELECT() {
+  return bitRead(dataBuffer[0], SELECT);
+}
+/*
+   Permet de détecter les flancs montants des boutons dans une seule fonction
+   Reçoit le nom du bouton ainsi que son numéro d'identification de flanc (les numéros sont déclarés dans un booléen au début du code)
+   Retourne vrai si c'est un flanc montant (nouvel état du bouton)
+   Retourne faux si l'état est le même que précédemment
+*/
 bool ButtonFlanc(bool button, int flancId) {
   if (button && !flancsMontants[flancId]) {
     return true;
@@ -273,11 +334,15 @@ void communicationManette() {
    Elle change l'état actuelle de la variable state et retourne son état actuel.
    Permet de faire d'autres actions sur des variables lors d'un changement d'état directement dans cette fonction si nécessaire
    Evite de passer par une variable grobale.
+   Reçoit l'argument facultatif menuPos
+   Retourne la variable currentState
 */
-State setState(State state, int menuPos = 0) {
-  stateMenuPos = menuPos;
+State setState(State state, int menuPos = -1) {
+  if (menuPos > -1) {
+    stateMenuPos = menuPos;
+  }
   if (currentState == state)return currentState; // Evite de traiter inutilement les données s'il n'y a pas de changement
-  previousState = currentState; // non utilisé car remplacé par le savedMode
+  //previousState = currentState; // non utilisé car remplacé par le savedMode
   currentState = state;
   return currentState;
 }
