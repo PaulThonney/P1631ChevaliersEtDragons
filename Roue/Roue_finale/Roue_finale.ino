@@ -118,8 +118,8 @@ void setup()
 void convertToMotor(int x, int y)
 {
   //Transforme le système de coordonnées du joystick de manière à ce que le point (0;0) soit au centre.
-  transf_x = (512 - x);
-  transf_y = (y - 512);
+  transf_x = (127 - x);
+  transf_y = (y - 127);
 }
 
 void checkDirection()

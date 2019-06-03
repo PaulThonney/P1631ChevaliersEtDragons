@@ -9,9 +9,9 @@
 
 //toutes les adresses I2C
 
-#define INTEL 1 // adresse de l'intelligence centrale, arduino nano sur le PCB Bluetooth
+#define ADRESSE_INTELLIGENCE_CENTRALE 1 // adresse de l'intelligence centrale, arduino nano sur le PCB Bluetooth
 
-#define TRAQUAGE_AV 20 // Arduino Nano se trouvant sur le PCB traquage_AV (pcb du bas de la tête)
+#define TRAQUAGE_AV 20 // Arduino Nano se trouvant sur le PCB traquage_AV (ici c'est l'angle du servo qui est transmit)
 
 #define CONTACT 2  //  PCB HMI, Nano se trouvant à gauche lorsqu'on regarde le U depuis sa base. Il gère les plaque de contact et les LED
 
@@ -62,7 +62,7 @@ State previousState; // Ancien état
 int stateMenuPos = 0; // Position du curseur
 
 void setup() {
-  Wire.begin(INTEL);
+  Wire.begin(ADRESSE_INTELLIGENCE_CENTRALE);
   Wire.onReceive(receiveEvent);
   Serial.begin(115200, SERIAL_8N1);
 }
@@ -111,15 +111,19 @@ bool checkPause() {
 
 /*
    Fonction qui gère le mode automatique des robots
+   Pour le moment elle récupère uniquement l'angle du servo et le transmet aux roues.
 */
 void loopAutomatique() {
   if (checkPause()) { // quitte directement la loop si la pause est pressée et évite que le "state" puisse être changé dans la fonction
     return;
   }
+  Wire.write(ADRESSE_ROUE);
+  Wire.write(anglePixy);
 }
 
 /*
    Fonction qui gère le mode manuel des robots
+   Elle transmet la position des joysticks a l'arduino des roues
 */
 void loopManuel() {
   if (checkPause()) { // quitte directement la loop si la pause est pressée et évite que le "state" puisse être changé dans la fonction
@@ -321,11 +325,7 @@ bool ButtonFlanc(bool button, int flancId) {
 void communicationManette() {
   uint8_t dataBufferWrite[2] = {output, sonEtVibreur};// réenvoie les données à la manette
   Serial.write(dataBufferWrite, 2);
-  if (Serial.available() < 8) { // controlle la longueure de la tramme et si elle ne correspond pas il quitte et remet à zero les buffers de boutons
-    for (int i = 0; i < BUFFER_SIZE; i++) {
-      dataBuffer[i] = 0;
-    }
-    return;
+  while (Serial.available() < 8) { // controlle la longueure de la tramme et si elle ne correspond pas il quitte et remet à zero les buffers de boutons
   }
   Serial.readBytes(dataBuffer, BUFFER_SIZE); //lit les infos en provenance de la manette
 }
