@@ -66,7 +66,7 @@ void setup() {
   Wire.onReceive(receiveEvent);
   Serial2.begin(115200);
   Serial.begin(115200);
-  Serial.println("hellolespelos");
+  Serial.println("Setup completed");
 }
 
 void loop() {
@@ -120,14 +120,16 @@ void loopManuel() {
     return;
   }
   output = 27;
+  return;
   Wire.beginTransmission(ADRESSE_ROUE);
-  if (AxisLX() >= 132 || AxisLX() <= 122) {
+  Wire.write(ADRESSE_ROUE);
+  if (AxisLX() >= 134 || AxisLX() <= 120) {
     Wire.write(AxisLX());
   }
   else {
     Wire.write(127);
   }
-  if (AxisLY() >= 132 || AxisLY() <= 122) {
+  if (AxisLY() >= 134 || AxisLY() <= 120) {
     Wire.write(AxisLY());
   }
   else {
@@ -189,6 +191,7 @@ bool ButtonEAST()   {
   return bitRead(dataBuffer[1], EAST);
 }
 bool ButtonNORTH()  {
+
   return bitRead(dataBuffer[1], NORTH);
 }
 bool ButtonSOUTH()  {
@@ -251,6 +254,13 @@ State setState(State state, int menuPos = -1) {
   if (menuPos > -1) {
     stateMenuPos = menuPos;
   }
+  Serial.print("Set State: ");
+  Serial.print(state);
+  Serial.print(" Saved: ");
+  Serial.print(savedMode);
+  Serial.print(" MenuPos: ");
+  Serial.print(stateMenuPos);
+  Serial.println();
   if (currentState == state)return currentState; // Evite de traiter inutilement les données s'il n'y a pas de changement
   //previousState = currentState; // non utilisé car remplacé par le savedMode
   currentState = state;
@@ -282,11 +292,11 @@ void  loopMenuGo() {
 
 /*
    Change la position du curseur dans les menus à l'aide des touches NORTH et SOUTH
-   Reçoit la taille du menu
-   Retourne la position du curseur (un nombre entre 0 et la taille du menu)
+   @param byte taille du menu
+   @return byte position du curseur
 */
-int changeCursorPosition(int sizeMenu) {
-
+byte changeCursorPosition(byte sizeMenu) {
+  sizeMenu--; // permet de donner taille menu en comptant à partir de 1
   if (ButtonFlanc(ButtonNORTH(), 3)) {
     stateMenuPos++;
     if (stateMenuPos > sizeMenu) {
@@ -300,24 +310,23 @@ int changeCursorPosition(int sizeMenu) {
       stateMenuPos = sizeMenu;
     }
   }
-  
   return stateMenuPos;
 }
 
 void loopPauseGenerale() {
-  int tailleMenu = 2;
-  int pos = changeCursorPosition(tailleMenu);//changement position curseur
+  byte tailleMenu = 2; // compte à partir de 1 donc ici le menu fait 2
+  byte pos = changeCursorPosition(tailleMenu);//changement position curseur
 
   switch (pos) {
     case 0:
-      output = 12; // Info d'affichage pour la manette
+      output = 28; // Info d'affichage pour la manette
 
       if (ButtonFlanc(ButtonA(), 1)) {
         setState(State::MenuGO);
       }
       break;
     case 1:
-      output = 18; // Info d'affichage pour la manette
+      output = 29; // Info d'affichage pour la manette
 
       if (ButtonFlanc(ButtonA(), 1)) {
         setState(State::MenuSelection, 0);
@@ -331,11 +340,12 @@ void loopPauseGenerale() {
 
 */
 void  loopMenuSelection() {
-  int tailleMenu = 2;
-  int pos = changeCursorPosition(tailleMenu);//changement position curseur
-  State selectedMode;
+  byte tailleMenu = 2;
+  byte pos = changeCursorPosition(tailleMenu);//changement position curseur
+  State selectedMode = State::Automatique;
 
   switch (pos) {
+    default:
     case 0:
       output = 1;
       selectedMode = State::Automatique;

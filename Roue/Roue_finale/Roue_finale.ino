@@ -119,14 +119,20 @@ void convertToMotor(int x, int y)
 {
   //Transforme le système de coordonnées du joystick de manière à ce que le point (0;0) soit au centre.
   transf_x = (127 - x);
-  transf_y = (y - 127);
+  transf_y = (127-y);
+  Serial.print("transf_x :");
+  Serial.println(transf_x);
+  Serial.print("transf_y :");
+  Serial.println(transf_y);
+  //Serial.println("ConvertToMotor executed");
 }
 
 void checkDirection()
 {
   if (adresseMaitre != ADRESSE_SERVO) //si position x et y reçu, conversion en angle
-    angle = round((float)atan2(transf_y, transf_x) * 180 / 3.14); // angle de -180° à 180° // float pour calcul à virgule // avec passage de radian à degré
-  //Serial.println(angle);
+    angle = round((float)atan2(transf_y, transf_x)); // angle de -180° à 180° // float pour calcul à virgule // avec passage de radian à degré
+  Serial.print("angle :");
+  Serial.println(angle);
 
   if (angle >= 170 && angle <= -170)
   {
@@ -318,8 +324,8 @@ void loop()
     Serial.print ("droite:\t");
     Serial.println (pwm_right);
   */
-  
-  valr = analogRead(tempPinr);
+
+  /*valr = analogRead(tempPinr);
   int mvr = ( valr / 1024.0) * 5000;// vraiment, demandez à Humbert j'ai rien compris
   int celr = mvr / 10;
 
@@ -348,10 +354,10 @@ void loop()
     digitalWrite (8, LOW);
     //digitalWrite (12, LOW); //Eteint les ventilateurs
   }
-  
-    //Serial.println(x);
-    //Serial.println(y);
-  
+*/
+  //Serial.println(x);
+  //Serial.println(y);
+
   if ((x == 0 && y == 0) || variableRecu == 0) //Si le joystick est "au repos" on laisse libre les moteurs
   {
     digitalWrite(INPUT_1_MOTOR_R,    LOW);
@@ -374,7 +380,7 @@ void loop()
 
 void receiveEvent(int howMany)
 {
-  Serial.println("i2c entré");
+  //Serial.println("i2c entré");
   //Serial.println("howMany: ");
   adresseMaitre = (uint8_t)Wire.read();
   if (adresseMaitre == ADRESSE_SERVO)
@@ -392,8 +398,8 @@ void receiveEvent(int howMany)
     uint8_t posX = 0, posY = 0;
     posX = (uint8_t)Wire.read();
     posY = (uint8_t)Wire.read();
-    Serial.println (posX);
-    Serial.println (posY);
+    //Serial.println (posX);
+    //Serial.println (posY);
     /* //utilisé pour tester avec alime limité en ampérage var les pics sont très élevés
       if (posX - x > 20) { //limitation en cas d'accélération
         posX = x + 20;
