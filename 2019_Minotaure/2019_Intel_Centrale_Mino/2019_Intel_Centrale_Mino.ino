@@ -40,7 +40,9 @@
 
 byte dataBuffer[BUFFER_SIZE];
 byte output = 0;
-bool flancsMontants[] = {false, false, false, false, false}; //0: null; 1: A; 2: B, 3: NORTH, 4: SOUTH
+//Il stoque la valeure actuelle du flanc montant pour les boutons dont la correspondance est telle:
+//0: null; 1: A; 2: B, 3: NORTH, 4: SOUTH
+bool flancsMontants[] = {false, false, false, false, false};
 byte vie = 3;// Variable qui indique le nombre de vie restante
 int message;//adresse du capteur qui lui parle
 byte anglePixy;
@@ -151,77 +153,173 @@ void receiveEvent(int howMany) {
 }
 
 /*
-    Les fonctions suivantes permettent de récupèrer l'état de n'importe quel bouton/joystick plus loin dans le code
+   @func byte AxisLX retourne la valeure de l'axe X du joystick gauche
+   @param null
+   @return byte
 */
 byte AxisLX()       {
   return dataBuffer[4];
 }
+/*
+   @func byte AxisLY retourne la valeure de l'axe Y du joystick gauche
+   @param null
+   @return byte
+*/
 byte AxisLY()       {
   return dataBuffer[5];
 }
+/*
+   @func byte AxisRX retourne la valeure de l'axe X du joystick droite
+   @param null
+   @return byte
+*/
 byte AxisRX()       {
   return dataBuffer[6];
 }
+/*
+   @func byte AxisRY retourne la valeure de l'axe Y du joystick droite
+   @param null
+   @return byte
+*/
 byte AxisRY()       {
   return dataBuffer[7];
 }
+/*
+   @func byte AxisLT retourne la valeure de la gachette droite
+   @param null
+   @return byte
+*/
 byte AxisLT()       {
   return dataBuffer[2];
 }
+/*
+   @func byte AxisRT retourne la valeure de la gachette Gauche
+   @param null
+   @return byte
+*/
 byte AxisRT()       {
   return dataBuffer[3];
 }
-
+/*
+   @func bool ButtonA retourne la valeure du boutton A
+   @param null
+   @return bool
+*/
 bool ButtonA()      {
   return bitRead(dataBuffer[0], A);
 }
+/*
+   @func bool ButtonB retourne la valeure du boutton B
+   @param null
+   @return bool
+*/
 bool ButtonB()      {
   return bitRead(dataBuffer[0], B);
 }
+/*
+   @func bool ButtonX retourne la valeure du boutton X
+   @param null
+   @return bool
+*/
 bool ButtonX()      {
   return bitRead(dataBuffer[0], X);
 }
+/*
+   @func bool ButtonY retourne la valeure du boutton Y
+   @param null
+   @return bool
+*/
 bool ButtonY()      {
   return bitRead(dataBuffer[0], Y);
 }
+/*
+   @func bool ButtonWEST retourne la valeure du boutton WEST
+   @param null
+   @return bool
+*/
 bool ButtonWEST()   {
   return bitRead(dataBuffer[1], WEST);
 }
+/*
+   @func bool ButtonEAST retourne la valeure du boutton EAST
+   @param null
+   @return bool
+*/
 bool ButtonEAST()   {
   return bitRead(dataBuffer[1], EAST);
 }
+/*
+   @func bool ButtonNORTH retourne la valeure du boutton NORTH
+   @param null
+   @return bool
+*/
 bool ButtonNORTH()  {
 
   return bitRead(dataBuffer[1], NORTH);
 }
+/*
+   @func bool ButtonSOUTH retourne la valeure du boutton SOUTH
+   @param null
+   @return bool
+*/
 bool ButtonSOUTH()  {
   return bitRead(dataBuffer[1], SOUTH);
 }
+/*
+   @func bool ButtonLB retourne la valeure du boutton LB
+   @param null
+   @return bool
+*/
 bool ButtonLB()     {
   return bitRead(dataBuffer[0], LB);
 }
+/*
+   @func bool ButtonRB retourne la valeure du boutton RB
+   @param null
+   @return bool
+*/
 bool ButtonRB()     {
   return bitRead(dataBuffer[0], RB);
 }
+/*
+   @func bool ButtonLS retourne la valeure du boutton LS
+   @param null
+   @return bool
+*/
 bool ButtonLS()     {
   return bitRead(dataBuffer[0], LS);
 }
+/*
+   @func bool ButtonRS retourne la valeure du boutton RS
+   @param null
+   @return bool
+*/
 bool ButtonRS()     {
   return bitRead(dataBuffer[0], RS);
 }
+/*
+   @func bool ButtonSTART retourne la valeure du boutton START
+   @param null
+   @return bool
+*/
 bool ButtonSTART()  {
   return bitRead(dataBuffer[0], START);
 }
+/*
+   @func bool ButtonSELECT retourne la valeure du boutton SELECT
+   @param null
+   @return bool
+*/
 bool ButtonSELECT() {
   return bitRead(dataBuffer[0], SELECT);
 }
 /*
-   Permet de détecter les flancs montants des boutons dans une seule fonction
-   Reçoit le nom du bouton ainsi que son numéro d'identification de flanc (les numéros sont déclarés dans un booléen au début du code)
-   Retourne vrai si c'est un flanc montant (nouvel état du bouton)
-   Retourne faux si l'état est le même que précédemment
+   @func bool ButtonFlanc Permet de détecter les flancs montants des boutons dans une seule fonction
+   @param bool button
+   #param byte flancId 0: null; 1: A; 2: B, 3: NORTH, 4: SOUTH
+   @return bool
 */
-bool ButtonFlanc(bool button, int flancId) {
+bool ButtonFlanc(bool button, byte flancId) {
   bool temp = false;
   if (button && !flancsMontants[flancId]) {
     temp = true;
@@ -229,10 +327,11 @@ bool ButtonFlanc(bool button, int flancId) {
   flancsMontants[flancId] = button;
   return temp;
 }
-
 /*
-   Gère la communication avec l'esp32 du groupe manette installé sur le pcb. On commence par réenvoyer les données que l'on possède ce qui fait que l'esp32 nous envoie
-   les siennes directement.
+   @func void communicationManette Gère la communication avec l'esp32 du groupe manette installé sur le pcb.
+   On commence par réenvoyer les données que l'on possède ce qui fait que l'esp32 nous envoieles siennes directement.
+   @param null
+   @return void
 */
 void communicationManette() {
   uint8_t dataBufferWrite[2] = {output, sonEtVibreur};// réenvoie les données à la manette
@@ -242,35 +341,36 @@ void communicationManette() {
   }
   Serial2.readBytes(dataBuffer, BUFFER_SIZE); //lit les infos en provenance de la manette
 }
-
 /*
-   Elle change l'état actuelle de la variable state et retourne son état actuel.
-   Permet de faire d'autres actions sur des variables lors d'un changement d'état directement dans cette fonction si nécessaire
+   @func State setState  Elle change l'état actuelle de la variable state et retourne son état actuel.
+   Permet de faire d'autres actions sur des variables lors d'un changement d'état directement dans cette fonction si nécessaire.
    Evite de passer par une variable grobale.
-   Reçoit l'argument facultatif menuPos
-   Retourne la variable currentState
+   @param State state
+   #param int menuPos
+   @return State currentState
 */
 State setState(State state, int menuPos = -1) {
   if (menuPos > -1) {
     stateMenuPos = menuPos;
   }
-  Serial.print("Set State: ");
-  Serial.print(state);
-  Serial.print(" Saved: ");
-  Serial.print(savedMode);
-  Serial.print(" MenuPos: ");
-  Serial.print(stateMenuPos);
-  Serial.println();
+  /*
+    Serial.print("Set State: ");
+    Serial.print(state);
+    Serial.print(" Saved: ");
+    Serial.print(savedMode);
+    Serial.print(" MenuPos: ");
+    Serial.print(stateMenuPos);
+    Serial.println();
+  */
   if (currentState == state)return currentState; // Evite de traiter inutilement les données s'il n'y a pas de changement
   //previousState = currentState; // non utilisé car remplacé par le savedMode
   currentState = state;
   return currentState;
 }
-
 /*
-   Vérifie s'il y a une demande de pause lors de la partie
-   Retourne vrai si il y a demande de pause
-   Retourne faux si pas demande de pause
+   @func bool checkPause Vérifie s'il y a une demande de pause lors de la partie
+   @param null
+   @return bool
 */
 bool checkPause() {
   if (ButtonFlanc(ButtonB(), 2)) {
@@ -279,9 +379,10 @@ bool checkPause() {
   }
   return false;
 }
-
 /*
-   Gère le menu GO qui marque une pause avant de lancer la partie (affichage 1 et 2 et boutons)
+   @func void loopMenuGo Gère le menuGo (affichage et pression des boutons)
+   @param null
+   @return void
 */
 void  loopMenuGo() {
   output = 3;
@@ -289,11 +390,10 @@ void  loopMenuGo() {
     setState(savedMode);
   }
 }
-
 /*
-   Change la position du curseur dans les menus à l'aide des touches NORTH et SOUTH
-   @param byte taille du menu
-   @return byte position du curseur
+   @param changeCursorPosition Change la position du curseur dans les menus à l'aide des touches NORTH et SOUTH
+   @param byte sizeMenu taille du menu en comptant à partir de 1
+   @return byte stateMenuPos position du curseur
 */
 byte changeCursorPosition(byte sizeMenu) {
   sizeMenu--; // permet de donner taille menu en comptant à partir de 1
@@ -312,7 +412,11 @@ byte changeCursorPosition(byte sizeMenu) {
   }
   return stateMenuPos;
 }
-
+/*
+   @func void loopPauseGenerale Gère le mode pauseGenerale (affichage et pression des boutons)
+   @param null
+   @return void
+*/
 void loopPauseGenerale() {
   byte tailleMenu = 2; // compte à partir de 1 donc ici le menu fait 2
   byte pos = changeCursorPosition(tailleMenu);//changement position curseur
@@ -334,10 +438,10 @@ void loopPauseGenerale() {
       break;
   }
 }
-
 /*
-   Gère le menu général de selection de mode (affichage 1 et boutons)
-
+   @func void loopMenuSelection Gère le mode MenuSelection (affichage et pression des boutons)
+   @param null
+   @return void
 */
 void  loopMenuSelection() {
   byte tailleMenu = 2;
