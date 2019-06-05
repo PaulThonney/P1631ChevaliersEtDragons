@@ -1,12 +1,14 @@
+#include <SoftPWM.h>
+
 #include <Wire.h>
 
-#define PWM_OUTPUT_MOTOR_L 6 // Pin où sort le pwm du moteur 2
-#define INPUT_4_MOTOR_L   10   // Pin pour un sens
-#define INPUT_3_MOTOR_L    11  // Pin pour l'autre sens
+#define PWM_OUTPUT_MOTOR_L 4 // Pin 5 où sort le pwm du moteur 2
+#define INPUT_4_MOTOR_L    3  // Pin 9 pour un sens
+#define INPUT_3_MOTOR_L    9  // Pin 3 pour l'autre sens
 
-#define PWM_OUTPUT_MOTOR_R 5 // Pin où sort le pwm du moteur 1
-#define INPUT_2_MOTOR_R    9  // Pin pour un sens
-#define INPUT_1_MOTOR_R    3  // Pin pour l'autre sens
+#define PWM_OUTPUT_MOTOR_R 7 // Pin 6 où sort le pwm du moteur 1
+#define INPUT_2_MOTOR_R    10  // Pin 10 pour un sens
+#define INPUT_1_MOTOR_R    11  // Pin 11 pour l'autre sens
 
 #define PIN_TEMP_R    A2
 #define PIN_TEMP_L    A3
@@ -14,30 +16,31 @@
 #define PIN_VENT_L    8
 #define PIN_LED_URGENCE 2
 #define EMERGENCY_TEMP 29
-#define PWM_MIN 50
-#define PWM_MAX 150
+#define PWM_MIN 10
+#define PWM_MAX 100
 
 bool tempOverheating[] = {0, 0};
 
 int stateMotors[][4] = {
-  {0, INPUT_1_MOTOR_R, INPUT_2_MOTOR_R, PWM_OUTPUT_MOTOR_R},
-  {0, INPUT_3_MOTOR_L, INPUT_4_MOTOR_L, PWM_OUTPUT_MOTOR_L}
+  {-10, INPUT_1_MOTOR_R, INPUT_2_MOTOR_R, PWM_OUTPUT_MOTOR_R},
+  {10, INPUT_3_MOTOR_L, INPUT_4_MOTOR_L, PWM_OUTPUT_MOTOR_L}
 }; //value, ph1, ph2, pwm
 
 void setup() {
+  SoftPWMBegin();
   Serial.begin(9600);
 
   Wire.begin(19);
   Wire.onReceive(receiveEvent);
 
   //Moteur droite
-  pinMode(PWM_OUTPUT_MOTOR_R,      OUTPUT);
+  SoftPWMSet(PWM_OUTPUT_MOTOR_R, 0);
   pinMode(INPUT_1_MOTOR_R,         OUTPUT);
   pinMode(INPUT_2_MOTOR_R,         OUTPUT);
   //Input 1 et 2 : pont en H du moteur droite
 
   //Moteur gauche
-  pinMode(PWM_OUTPUT_MOTOR_L,      OUTPUT);
+  SoftPWMSet(PWM_OUTPUT_MOTOR_L, 0);
   pinMode(INPUT_3_MOTOR_L,         OUTPUT);
   pinMode(INPUT_4_MOTOR_L,         OUTPUT);
 
@@ -100,20 +103,32 @@ void Motor(byte id) {
   int pinPontH1 = stateMotors[id][1];
   int pinPontH2 = stateMotors[id][2];
   int pinPWM = stateMotors[id][3];
+
+  if (false) {
+    Serial.println("==MOTOR==");
+    Serial.println("ID: " + String(id));
+    Serial.println("value: " + String(value));
+    Serial.println("pinPontH1: " + String(pinPontH1));
+    Serial.println("pinPontH2: " + String(pinPontH2));
+    Serial.println("pinPWM: " + String(pinPWM));
+    Serial.println("===============");
+  }
+
   if (value == 0) {
     digitalWrite(pinPontH1, LOW);
     digitalWrite(pinPontH2, LOW);
     analogWrite(pinPWM, 0);
     return;
   }
-  digitalWrite(pinPontH1, (value < 0)? LOW : HIGH);
-  digitalWrite(pinPontH2, (value < 0)? HIGH : LOW);
-  analogWrite(pinPWM, abs(value));
+  digitalWrite(pinPontH1, (value < 0) ? LOW : HIGH);
+  digitalWrite(pinPontH2, (value < 0) ? HIGH : LOW);
+  SoftPWMSetPercent(pinPWM, abs(value));
 }
 
 
 void loopMotor() {
-
+  Motor(0);
+  Motor(1);
 }
 
 void loop() {
