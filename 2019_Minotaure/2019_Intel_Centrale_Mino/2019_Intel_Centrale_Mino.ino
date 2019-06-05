@@ -66,6 +66,7 @@ int stateMenuPos = 0; // Position du curseur
 //ROBOT
 byte currentLife = MAX_LIFE;
 int hurtCooldown = 0;
+int currentMotorValue[2];
 //END ROBOT
 
 void setup() {
@@ -162,6 +163,8 @@ void loopManuel() {
 }
 
 void sendMotorValue(byte id, int value) {
+  if (currentMotorValue[id] == value)return; //évite de faire une comm si rien n'a changé
+  currentMotorValue[id] = value;
   Wire.beginTransmission(ADRESSE_ROUE);
   Wire.write(id);
   Wire.write(value);
