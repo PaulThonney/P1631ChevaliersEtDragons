@@ -20,10 +20,14 @@
 
 bool tempOverheating[] = {0, 0};
 
-int stateMotors[][4] = {
-  { -10, INPUT_1_MOTOR_R, INPUT_2_MOTOR_R, PWM_OUTPUT_MOTOR_R},
-  {10, INPUT_3_MOTOR_L, INPUT_4_MOTOR_L, PWM_OUTPUT_MOTOR_L}
-}; //value, ph1, ph2, pwm
+int stateMotors[][6] = {
+  { -10, 0, INPUT_1_MOTOR_R, INPUT_2_MOTOR_R, PWM_OUTPUT_MOTOR_R},
+  {10, 0, INPUT_3_MOTOR_L, INPUT_4_MOTOR_L, PWM_OUTPUT_MOTOR_L}
+}; //value, measured, ph1, ph2, pwm, captor
+
+unsigned long timerMotors[2][2];
+int nbPulseMotors[2];
+bool flagPulseMotors[2];
 
 void setup() {
   SoftPWMBegin();
@@ -106,9 +110,25 @@ int getMotorValue(byte id) {
 
 void Motor(byte id) {
   int value = stateMotors[id][0];
-  int pinPontH1 = stateMotors[id][1];
-  int pinPontH2 = stateMotors[id][2];
-  int pinPWM = stateMotors[id][3];
+  int pinPontH1 = stateMotors[id][2];
+  int pinPontH2 = stateMotors[id][3];
+  int pinPWM = stateMotors[id][4];
+  int pinSensor = stateMotors[id][5];
+
+
+  if (timerMotors[id][0] > millis()) {
+    if (digitalRead(pinSensor) == HIGH && flagPulseMotors[id] == false) {
+      flagPulseMotors[id] = true;
+      nbPulseMotors[id]++;
+    }
+    if (digitalRead(pinSensor) == false && flagPulseMotors[id] == true) {
+      flagPulseMotors[id] = false;
+    }
+  } else {
+    timerMotors[id][0] = millis() + 20;
+    stateMotors[id][1] = nbPulseMotors[id];//measure
+    nbPulseMotors[id] = 0;
+  }
 
   if (false) {
     Serial.println("==MOTOR==");
@@ -128,7 +148,8 @@ void Motor(byte id) {
   }
   digitalWrite(pinPontH1, (value < 0) ? LOW : HIGH);
   digitalWrite(pinPontH2, (value < 0) ? HIGH : LOW);
-  SoftPWMSetPercent(pinPWM, abs(value));
+
+  SoftPWMSetPercent(pinPWM, regulationPID(abs(value), stateMotors[id][1]));
 }
 
 void loopMotors() {
@@ -148,6 +169,39 @@ void digitalBlink(byte pin, unsigned int d) { // fait clignoter un pin avec un d
 int getTemp(byte pin) {
   return ( analogRead(pin) / 1024.0) * 5000 / 10;
 }
+
+
+#define KP 2
+#define KI 2
+#define KD 1
+
+int integral = 0;
+int previousError = 0;
+
+int regulationPID(byte objective, byte measuredValue) {
+  int error = objective - measuredValue;
+  byte maxV = 100; //avant 255
+  integral += (int)(error * 0.555);
+  if (integral  > maxV) {
+    integral = maxV;
+  } else if (integral < -maxV) {
+    integral = -maxV;
+  }
+
+  int derivative = 0;//(error - previousError) / durationPID;
+  previousError = error;
+  int value = (error * KP * 0.5f + integral * KI + derivative * KD) * 4;
+  if ( value > maxV) {
+    value = maxV;
+  } else if ((error * KP * 0.5f + integral * KI + derivative * KD) * 4 < -maxV) {
+    value = -maxV;
+  }
+  if (value < 0) {
+    return 0;
+  }
+  return value;
+}
+
 
 ////////////////////PARTIE I2C////////////////////
 void receiveEvent(int howMany) {

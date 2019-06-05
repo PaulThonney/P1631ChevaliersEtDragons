@@ -36,6 +36,7 @@
 #define RS 3 //addr 1
 #define START 1 //addr 0
 #define SELECT 0 //addr 0
+#define JOYSTICK_MARGIN 0.1
 
 byte dataBuffer[BUFFER_SIZE];
 byte output = 0;
@@ -184,7 +185,9 @@ void receiveEvent(int howMany) {
 }
 
 float JoystickValue(byte v) {
-  return mapfloat(v, 0, 255, -1, 1);
+  float tmp = mapfloat(v, 0, 255, -1, 1);
+  if (tmp >= -JOYSTICK_MARGIN || tmp <= JOYSTICK_MARGIN)tmp = 0;
+  return tmp;
 }
 
 /*
