@@ -10,16 +10,16 @@
 //toutes les adresses I2C
 
 #define ADRESSE_INTELLIGENCE_CENTRALE 1 // adresse de l'intelligence centrale, arduino nano sur le PCB Bluetooth
-
 #define TRAQUAGE_AV 20 // Arduino Nano se trouvant sur le PCB traquage_AV (ici c'est l'angle du servo qui est transmit)
-
 #define CONTACT 2  //  PCB HMI, Nano se trouvant à gauche lorsqu'on regarde le U depuis sa base. Il gère les plaque de contact et les LED
-
 #define ADRESSE_ROUE 19// PCB Puissance, "Arduino 2" Nano
-
 #define TRAQUAGE_AR // Arduino Nano se trouvant sur le PCB traquage_AR (pcb du haut de la tête) il gère la fumée
-
 #define SON // PCB HMI,  Nano se trouvant à droite lorsqu'on regarde le U depuis sa base. Il gère le HP
+
+//DEFINE ROBOT
+
+#define MAX_LIFE 6
+#define HURT_COOLDOWN 5000 // en ms
 
 //BUTTONS
 #define BUFFER_SIZE 8
@@ -63,6 +63,12 @@ State previousState; // Ancien état
 
 int stateMenuPos = 0; // Position du curseur
 
+
+//ROBOT
+byte currentLife = MAX_LIFE;
+int hurtCooldown = 0;
+//END ROBOT
+
 void setup() {
   Wire.begin(ADRESSE_INTELLIGENCE_CENTRALE);
   Wire.onReceive(receiveEvent);
@@ -98,6 +104,22 @@ void loop() {
         break;
       }
   }
+}
+
+void setupRobot() {
+  currentLife = MAX_LIFE;
+  hurtCooldown = 0;
+}
+
+bool hurt(byte dmg) {
+  if (millis() < hurtCooldown)return false; //Cooldown
+  hurtCooldown = millis() + HURT_COOLDOWN;
+  currentLife -= dmg;
+  if (currentLife <= 0) {
+    //DEAD
+    currentLife = 0;
+  }
+  return true;
 }
 
 /*
