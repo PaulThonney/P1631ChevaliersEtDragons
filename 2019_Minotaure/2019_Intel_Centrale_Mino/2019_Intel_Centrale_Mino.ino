@@ -6,7 +6,6 @@
 */
 
 #include <Wire.h> //I2C
-
 //toutes les adresses I2C
 
 #define ADRESSE_INTELLIGENCE_CENTRALE 1 // adresse de l'intelligence centrale, arduino nano sur le PCB Bluetooth
@@ -144,21 +143,28 @@ void loopManuel() {
     return;
   }
   output = 27;
-  return;
+
+  float jX = JoystickValue(AxisLX());
+  float jY = JoystickValue(AxisLY());
+
+  int speed1 = 100 * jY;
+  int speed2 = 100 * jY;
+
+  if (jX < 0) {
+    speed1 *= (1 - abs(jX));
+  }
+  if (jX > 0) {
+    speed2 *= (1 - abs(jX));
+  }
+
+  sendMotorValue(0, speed1);
+  sendMotorValue(1, speed2);
+}
+
+void sendMotorValue(byte id, int value) {
   Wire.beginTransmission(ADRESSE_ROUE);
-  Wire.write(ADRESSE_ROUE);
-  if (AxisLX() >= 134 || AxisLX() <= 120) {
-    Wire.write(AxisLX());
-  }
-  else {
-    Wire.write(127);
-  }
-  if (AxisLY() >= 134 || AxisLY() <= 120) {
-    Wire.write(AxisLY());
-  }
-  else {
-    Wire.write(127);
-  }
+  Wire.write(id);
+  Wire.write(value);
   Wire.endTransmission();
 }
 
@@ -172,6 +178,10 @@ void receiveEvent(int howMany) {
   {
     anglePixy = (uint8_t)Wire.read();//récupère l'angle reçu
   }
+}
+
+float JoystickValue(byte v) {
+  return mapfloat(v, 0, 255, -1, 1);
 }
 
 /*
@@ -349,6 +359,11 @@ bool ButtonFlanc(bool button, byte flancId) {
   flancsMontants[flancId] = button;
   return temp;
 }
+
+float mapfloat(float x, float in_min, float in_max, float out_min, float out_max) {
+  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
+
 /*
    @func void communicationManette Gère la communication avec l'esp32 du groupe manette installé sur le pcb.
    On commence par réenvoyer les données que l'on possède ce qui fait que l'esp32 nous envoieles siennes directement.
