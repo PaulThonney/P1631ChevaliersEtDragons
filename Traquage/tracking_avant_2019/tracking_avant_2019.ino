@@ -12,7 +12,6 @@ Pixy pixy; //donne un nom à la pixy
 Servo servo; // donne un nom de Servomoteur
 
 //adresse I2C
-#define ID_PIXY 1
 #define ADRESSE_INTELLIGENCE_CENTRALE 1
 #define ADRESSE_TRACKAGE 20
 #define PIN_SERVO 5
@@ -61,7 +60,7 @@ void communication() {
   wantedMessage = false;
 
   Wire.beginTransmission(ADRESSE_INTELLIGENCE_CENTRALE);
-  Wire.write(ID_PIXY);
+  Wire.write(ADRESSE_TRACKAGE);
   Wire.write(servo.read());
   Wire.write(distance);
   Wire.write(isTracking);

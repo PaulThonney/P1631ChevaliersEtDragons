@@ -65,7 +65,9 @@ int stateMenuPos = 0; // Position du curseur
 
 //AUTOMATIQUE
 long lastUpdateHead = 0;
-float headAngle = 0;
+int headAngle = 0;
+byte targetDistance = 0;
+bool isFindTarget = false;
 
 //ROBOT
 byte currentLife = MAX_LIFE;
@@ -141,6 +143,16 @@ void loopAutomatique() {
     return;
   }
 
+  if (millis() > lastUpdateHead + 25) {//demande à la pixy ces valeurs toutes les 25ms
+    Wire.beginTransmission(ADDR_TRAQUAGE);
+    Wire.write(0x3E);
+    Wire.endTransmission();
+  }
+
+  //headAngle;
+  //targetDistance;
+  //isFindTarget;
+
 
   output = 4;
 }
@@ -208,6 +220,11 @@ void receiveEvent(int howMany) {
       byte servo = Wire.read();
       byte distance = Wire.read();
       byte isTracking = Wire.read();
+      lastUpdateHead = millis();
+
+      headAngle = map(servo, 0, 180, -90, 90);
+      targetDistance = distance;
+      isFindTarget = isTracking;
       Serial.println("Servo: " + String(servo) + " Distance: " + String(distance) + " isTracking: " + String(isTracking));
       break;
   }
