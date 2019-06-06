@@ -42,7 +42,6 @@ byte output = 0;
 //Il stoque la valeure actuelle du flanc montant pour les boutons dont la correspondance est telle:
 //0: null; 1: A; 2: B, 3: NORTH, 4: SOUTH
 bool flancsMontants[] = {false, false, false, false, false};
-byte vie = 3;// Variable qui indique le nombre de vie restante
 byte anglePixy;
 byte sonEtVibreur; //4 premiers bits: buzzer; 4 derniers bits: vibreur
 
@@ -59,8 +58,14 @@ State savedMode = State::Automatique;
 State currentState = State::MenuSelection; // On démarre sur le menu de sélection
 State previousState; // Ancien état
 
+bool isStartedState = false;
+
 int stateMenuPos = 0; // Position du curseur
 
+
+//AUTOMATIQUE
+long lastUpdateHead = 0;
+float headAngle = 0;
 
 //ROBOT
 byte currentLife = MAX_LIFE;
@@ -126,13 +131,18 @@ bool hurt(byte dmg) {
    Pour le moment elle récupère uniquement l'angle du servo et le transmet aux roues.
 */
 void loopAutomatique() {
+  if (onStartState()) {//Seulement la première fois qu'il rentre dans la loop
+    Wire.beginTransmission(ADDR_TRAQUAGE);
+    Wire.write(0x1E);
+    Wire.endTransmission();
+  }
+
   if (checkPause()) { // quitte directement la loop si la pause est pressée et évite que le "state" puisse être changé dans la fonction
     return;
   }
+
+
   output = 4;
-  Wire.beginTransmission(ADDR_TRAQUAGE);
-  Wire.write(0x1E);
-  Wire.endTransmission();
 }
 
 /*
@@ -140,13 +150,17 @@ void loopAutomatique() {
    Elle transmet la position des joysticks a l'arduino des roues
 */
 void loopManuel() {
+  if (onStartState()) {//Seulement la première fois qu'il rentre dans la loop
+    Wire.beginTransmission(ADDR_TRAQUAGE);
+    Wire.write(0x2E);
+    Wire.endTransmission();
+  }
+
   if (checkPause()) { // quitte directement la loop si la pause est pressée et évite que le "state" puisse être changé dans la fonction
     return;
   }
   output = 27;
-  Wire.beginTransmission(ADDR_TRAQUAGE);
-  Wire.write(0x2E);
-  Wire.endTransmission();
+
   float jX = JoystickValue(AxisLX());
   float jY = JoystickValue(AxisLY());
 
@@ -188,14 +202,13 @@ void sendMotorValue(byte id, int value) {
 */
 void receiveEvent(int howMany) {
   Serial.println("howMany: " + String(howMany));
-  int message = (uint8_t)Wire.read();
-  switch (currentState) {
-    case State::Automatique:
-      int idPixy = (uint8_t)Wire.read();
-      if (message == ADDR_TRAQUAGE) {
-        anglePixy = (uint8_t)Wire.read();//récupère l'angle reçu
-        Serial.println("Angle Pixy: " + String(anglePixy));
-      }
+  byte addr = Wire.read();
+  switch (addr) {
+    case ADDR_TRAQUAGE:
+      byte servo = Wire.read();
+      byte distance = Wire.read();
+      byte isTracking = Wire.read();
+      Serial.println("Servo: " + String(servo) + " Distance: " + String(distance) + " isTracking: " + String(isTracking));
       break;
   }
 }
@@ -396,7 +409,7 @@ float mapfloat(float x, float in_min, float in_max, float out_min, float out_max
 void communicationManette() {
   uint8_t dataBufferWrite[2] = {output, sonEtVibreur};// réenvoie les données à la manette
   Serial2.write(dataBufferWrite, 2);
-  while (Serial2.available() < 8) { // controlle la longueure de la tramme et si elle ne correspond pas il quitte et remet à zero les buffers de boutons
+  while (Serial2.available() < 8) { // controlle la longueure de la tramme
     //Serial.print("#");
   }
   Serial2.readBytes(dataBuffer, BUFFER_SIZE); //lit les infos en provenance de la manette
@@ -424,9 +437,16 @@ State setState(State state, int menuPos = -1) {
   */
   Serial.println("Set State: " + String(state));
   if (currentState == state)return currentState; // Evite de traiter inutilement les données s'il n'y a pas de changement
+  isStartedState = false;
   //previousState = currentState; // non utilisé car remplacé par le savedMode
   currentState = state;
   return currentState;
+}
+
+bool onStartState() {
+  if (!isStartedState)return false;
+  isStartedState = true;
+  return isStartedState;
 }
 /*
    @func bool checkPause Vérifie s'il y a une demande de pause lors de la partie

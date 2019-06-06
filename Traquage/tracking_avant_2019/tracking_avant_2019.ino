@@ -12,7 +12,7 @@ Pixy pixy; //donne un nom à la pixy
 Servo servo; // donne un nom de Servomoteur
 
 //adresse I2C
-#define ADRESSE_PIXY1 12
+#define ID_PIXY 1
 #define ADRESSE_INTELLIGENCE_CENTRALE 1
 #define ADRESSE_TRACKAGE 20
 #define PIN_SERVO 5
@@ -21,6 +21,7 @@ Servo servo; // donne un nom de Servomoteur
 #define TEMPS_ATTENTE_RECHERCHE 250
 
 long unsigned lastTimeViewObject = 0;
+bool isTracking = false;
 bool sensBalayage;
 bool lastSideObject;
 bool needToTrack = false;
@@ -60,14 +61,18 @@ void communication() {
   wantedMessage = false;
 
   Wire.beginTransmission(ADRESSE_INTELLIGENCE_CENTRALE);
+  Wire.write(ID_PIXY);
   Wire.write(servo.read());
   Wire.write(distance);
+  Wire.write(isTracking);
   Wire.endTransmission();
 }
 
 void tracking() {
   uint16_t blocks; //nombre d'objets détecté par la Pixy
-  if (pixy.getBlocks()) {
+  isTracking = pixy.getBlocks();
+  if (isTracking) {
+    isTracking = true;
     blocks = pixy.getBlocks();
     lastTimeViewObject = millis();
     float posObj = posObject(pixy.blocks[0].x);
