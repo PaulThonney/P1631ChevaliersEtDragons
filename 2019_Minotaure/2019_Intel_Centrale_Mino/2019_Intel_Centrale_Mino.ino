@@ -1,8 +1,8 @@
 /* Code de l'Arduino gérant l'intelligence centrale du Minotaure
   Son but est de récolter toutes les informations des capteurs et de prendre des décisions en conséquence
-  AUTEURS: Dany VALADO (2018) Lucien PRUVOT Paul THONNEY
+  @author: Dany VALADO (2018) Lucien PRUVOT Paul THONNEY
   DATE: 28.05.19
-  REMERCIEMENTS: Merci à Maxime SCHARWATH et Joan MAILLARD pour leur aide
+  REMERCIEMENTS: Merci à Maxime SCHARWATH et Joan MAILLARD pour leur aide 
 */
 
 #include <Wire.h> //I2C
@@ -12,7 +12,6 @@
 #define ADDR_TRAQUAGE 20 // Arduino Nano se trouvant sur le PCB ADDR_TRAQUAGE (ici c'est l'angle du servo qui est transmit)
 #define CONTACT 2  //  PCB HMI, Nano se trouvant à gauche lorsqu'on regarde le U depuis sa base. Il gère les plaque de contact et les LED
 #define ADRESSE_ROUE 19// PCB Puissance, "Arduino 2" Nano
-#define TRAQUAGE_AR // Arduino Nano se trouvant sur le PCB traquage_AR (pcb du haut de la tête) il gère la fumée
 #define SON // PCB HMI,  Nano se trouvant à droite lorsqu'on regarde le U depuis sa base. Il gère le HP
 
 //DEFINE ROBOT

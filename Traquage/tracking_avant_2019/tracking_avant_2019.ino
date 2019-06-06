@@ -19,9 +19,11 @@ Servo servo; // donne un nom de Servomoteur
 #define TEMPS_CONTINUE_RECHERCHE 2000
 #define VITESSE_ROTATION_RECHERCHE 250
 #define TEMPS_ATTENTE_RECHERCHE 250
-bool lastSideObject;
+
 long unsigned lastTimeViewObject = 0;
 bool sensBalayage;
+bool lastSideObject;
+bool needToTrack = false;
 int posObj; //position de l'objet
 
 float posServo() {
@@ -33,17 +35,23 @@ float posObject(int pos) {
 void setup() {
   Serial.begin(9600);
 
+  Wire.begin(ADRESSE_TRACKAGE);
+  Wire.onReceive(receiveEvent);
+
   servo.attach(PIN_SERVO); //atribue une pin avec PWM au servomoteur
   servo.write(90); //met la tête droite
+
   Serial.print("Starting...\n");
+
   pixy.init(); //démarre la caméra Pixy
 }
 
 void loop() {
   tracking();
+  //communication();
 }
 
-unsigned int count=0;
+unsigned int count = 0;
 
 void tracking() {
   uint16_t blocks; //nombre d'objets détecté par la Pixy
@@ -51,15 +59,15 @@ void tracking() {
     blocks = pixy.getBlocks();
     lastTimeViewObject = millis();
     float posObj = posObject(pixy.blocks[0].x);
-   int width = (pixy.blocks[0].width);
-   int distance = map(width, 100,15,0,255);
-   if(distance<0){
-    distance = 0;
-   }
-    if(distance>255){
-    distance = 255;
-   }
-   Serial.println(distance);
+    int width = (pixy.blocks[0].width);
+    int distance = map(width, 100, 15, 0, 255);
+    if (distance < 0) {
+      distance = 0;
+    }
+    if (distance > 255) {
+      distance = 255;
+    }
+    Serial.println(distance);
     float posObjpositif = abs(posObj);
     int incrementation = mapfloat(posObjpositif, 0 , 1 , 0, 6);
     if (posObj < 0) {
@@ -72,12 +80,17 @@ void tracking() {
     }
   }
   else {
+    
     if (millis() < lastTimeViewObject + TEMPS_ATTENTE_RECHERCHE) {
       return;
     }
+    if (!needToTrack) {
+      servo.write(90);
+      return;
+    }
     count++;
-    if(count%VITESSE_ROTATION_RECHERCHE!=0)return;
-    
+    if (count % VITESSE_ROTATION_RECHERCHE != 0)return;
+
     if (millis() < lastTimeViewObject + TEMPS_CONTINUE_RECHERCHE) {
       sensBalayage = lastSideObject;
     }
@@ -98,6 +111,12 @@ void tracking() {
     }
   }
 }
+
+void receiveEvent(int howMany) {
+  Serial.println("howMany: " + String(howMany));
+  int message = (uint8_t)Wire.read();
+}
+
 float mapfloat(float x, float in_min, float in_max, float out_min, float out_max) {
   return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
