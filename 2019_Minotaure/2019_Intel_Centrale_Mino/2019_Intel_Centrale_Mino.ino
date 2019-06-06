@@ -186,10 +186,11 @@ void sendMotorValue(byte id, int value) {
    @return byte
 */
 void receiveEvent(int howMany) {
+  Serial.println("howMany: " + String(howMany));
   message = (uint8_t)Wire.read();
-  if (message == TRAQUAGE_AV)
-  {
+  if (message == TRAQUAGE_AV){
     anglePixy = (uint8_t)Wire.read();//récupère l'angle reçu
+    Serial.println("Angle Pixy: " + String(anglePixy));
   }
 }
 
