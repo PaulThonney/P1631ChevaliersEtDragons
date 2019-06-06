@@ -47,8 +47,7 @@ void setup()
 void loop()
 {
   uint16_t blocks; //nombre d'objets détecté par la Pixy
-  if (pixy.getBlocks())
-  {
+  if (pixy.getBlocks()){
     blocks = pixy.getBlocks();
     Serial.println(pixy.blocks[0].x);
     PositionX = pixy.blocks[0].x;
@@ -98,8 +97,7 @@ void loop()
     temps = millis() / 1000; //temps divisé par 1000 pour remplir la mémoire de la variable moins rapidement
 
   }
-  else
-  {
+  else{
     if (millis() < 5000) // 5s au départ pour fixer la tête
       servo.write (90);
     else if ( millis() / 1000 - temps > 2) // s'il perd sa cible depuis plus de 2s
