@@ -24,7 +24,9 @@ long unsigned lastTimeViewObject = 0;
 bool sensBalayage;
 bool lastSideObject;
 bool needToTrack = false;
+bool wantedMessage = false;
 int posObj; //position de l'objet
+int distance;
 
 float posServo() {
   return mapfloat(servo.read(), 0, 180, -1, 1);
@@ -48,10 +50,20 @@ void setup() {
 
 void loop() {
   tracking();
-  //communication();
+  communication();
 }
 
 unsigned int count = 0;
+
+void communication() {
+  if (!wantedMessage)return;
+  wantedMessage = false;
+
+  Wire.beginTransmission(ADRESSE_INTELLIGENCE_CENTRALE);
+  Wire.write(servo.read());
+  Wire.write(distance);
+  Wire.endTransmission();
+}
 
 void tracking() {
   uint16_t blocks; //nombre d'objets détecté par la Pixy
@@ -60,14 +72,14 @@ void tracking() {
     lastTimeViewObject = millis();
     float posObj = posObject(pixy.blocks[0].x);
     int width = (pixy.blocks[0].width);
-    int distance = map(width, 100, 15, 0, 255);
+    distance = map(width, 100, 15, 0, 255);
     if (distance < 0) {
       distance = 0;
     }
     if (distance > 255) {
       distance = 255;
     }
-    Serial.println(distance);
+    //Serial.println(distance);
     float posObjpositif = abs(posObj);
     int incrementation = mapfloat(posObjpositif, 0 , 1 , 0, 6);
     if (posObj < 0) {
@@ -80,7 +92,7 @@ void tracking() {
     }
   }
   else {
-    
+
     if (millis() < lastTimeViewObject + TEMPS_ATTENTE_RECHERCHE) {
       return;
     }
@@ -115,6 +127,17 @@ void tracking() {
 void receiveEvent(int howMany) {
   Serial.println("howMany: " + String(howMany));
   int message = (uint8_t)Wire.read();
+  switch (message) {
+    case 0x1E:
+      needToTrack = true;
+      break;
+    case 0x2E:
+      needToTrack = false;
+      break;
+    case 0x3E:
+      wantedMessage = true;
+      break;
+  }
 }
 
 float mapfloat(float x, float in_min, float in_max, float out_min, float out_max) {

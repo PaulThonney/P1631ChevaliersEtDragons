@@ -2,7 +2,7 @@
   Son but est de récolter toutes les informations des capteurs et de prendre des décisions en conséquence
   @author: Dany VALADO (2018) Lucien PRUVOT Paul THONNEY
   DATE: 28.05.19
-  REMERCIEMENTS: Merci à Maxime SCHARWATH et Joan MAILLARD pour leur aide 
+  REMERCIEMENTS: Merci à Maxime SCHARWATH et Joan MAILLARD pour leur aide
 */
 
 #include <Wire.h> //I2C
@@ -130,8 +130,9 @@ void loopAutomatique() {
     return;
   }
   output = 4;
-  Wire.beginTransmission(ADRESSE_ROUE);
-  Wire.write(anglePixy);
+  Wire.beginTransmission(ADDR_TRAQUAGE);
+  Wire.write(0x1E);
+  Wire.endTransmission();
 }
 
 /*
@@ -143,7 +144,9 @@ void loopManuel() {
     return;
   }
   output = 27;
-
+  Wire.beginTransmission(ADDR_TRAQUAGE);
+  Wire.write(0x2E);
+  Wire.endTransmission();
   float jX = JoystickValue(AxisLX());
   float jY = JoystickValue(AxisLY());
 
@@ -373,7 +376,7 @@ bool ButtonSELECT() {
 bool ButtonFlanc(bool button, byte flancId) {
   bool temp = false;
   if (button && !flancsMontants[flancId]) {
-    Serial.println("BUTTON PRESSED: "+String(flancId));
+    Serial.println("BUTTON PRESSED: " + String(flancId));
     temp = true;
   }
   flancsMontants[flancId] = button;
@@ -419,7 +422,7 @@ State setState(State state, int menuPos = -1) {
     Serial.print(stateMenuPos);
     Serial.println();
   */
-  Serial.println("Set State: "+String(state));
+  Serial.println("Set State: " + String(state));
   if (currentState == state)return currentState; // Evite de traiter inutilement les données s'il n'y a pas de changement
   //previousState = currentState; // non utilisé car remplacé par le savedMode
   currentState = state;
