@@ -21,8 +21,8 @@
 bool tempOverheating[] = {0, 0};
 
 int stateMotors[][6] = {
-  { -10, 0, INPUT_1_MOTOR_R, INPUT_2_MOTOR_R, PWM_OUTPUT_MOTOR_R},
-  {10, 0, INPUT_3_MOTOR_L, INPUT_4_MOTOR_L, PWM_OUTPUT_MOTOR_L}
+  {0, 0, INPUT_1_MOTOR_R, INPUT_2_MOTOR_R, PWM_OUTPUT_MOTOR_R},
+  {0, 0, INPUT_3_MOTOR_L, INPUT_4_MOTOR_L, PWM_OUTPUT_MOTOR_L}
 }; //value, measured, ph1, ph2, pwm, captor
 
 unsigned long timerMotors[2][2];
@@ -149,7 +149,9 @@ void Motor(byte id) {
   digitalWrite(pinPontH1, (value < 0) ? LOW : HIGH);
   digitalWrite(pinPontH2, (value < 0) ? HIGH : LOW);
 
-  SoftPWMSetPercent(pinPWM, regulationPID(abs(value), stateMotors[id][1]));
+  //int speedM = regulationPID(abs(value), stateMotors[id][1]);
+  int speedM = abs(value);
+  SoftPWMSetPercent(pinPWM, speedM);
 }
 
 void loopMotors() {
@@ -210,7 +212,14 @@ void receiveEvent(int howMany) {
     return;
   }
   byte motorId = Wire.read(); //premier byte
-  byte motorValue = Wire.read(); //deuxieme byte //A voir je sais pas si on peut passer une valeur de -100 à 100; sinon on utilise 1 bit pour le signe et les 7 autres pour 0-100!!!
+  byte motorValueByte = Wire.read(); //deuxieme byte
+
+  int motorValue = motorValueByte;
+  if (bitRead(motorValueByte, 7) == 1) {
+    bitClear(motorValueByte, 7);
+    motorValue = -motorValueByte;
+  }
+  Serial.println("MotorId: " + String(motorId) + " motorValue: " + String(motorValue));
   if (!setMotorValue(motorId, motorValue)) {
     Serial.println("ERREUR MOTEUR");
   }

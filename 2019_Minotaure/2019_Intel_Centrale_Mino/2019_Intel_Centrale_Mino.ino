@@ -36,7 +36,7 @@
 #define RS 3 //addr 1
 #define START 1 //addr 0
 #define SELECT 0 //addr 0
-#define JOYSTICK_MARGIN 0.1
+#define JOYSTICK_MARGIN 0.02f
 
 byte dataBuffer[BUFFER_SIZE];
 byte output = 0;
@@ -149,8 +149,10 @@ void loopManuel() {
   float jX = JoystickValue(AxisLX());
   float jY = JoystickValue(AxisLY());
 
-  int speed1 = 100 * jY;
-  int speed2 = 100 * jY;
+  float hyp = sqrt(jX * jX + jY * jY);
+
+  int speed1 = 100 * hyp;
+  int speed2 = 100 * hyp;
 
   if (jX < 0) {
     speed1 *= (1 - abs(jX));
@@ -161,20 +163,27 @@ void loopManuel() {
 
   sendMotorValue(0, speed1);
   sendMotorValue(1, speed2);
+  Serial.println("speed1:" + String(speed1));
+  Serial.println("speed2:" + String(speed2));
 }
 
 void sendMotorValue(byte id, int value) {
   if (currentMotorValue[id] == value)return; //évite de faire une comm si rien n'a changé
   currentMotorValue[id] = value;
+  byte data = abs(value);
+  if ((value < 0)) {
+    bitSet(data, 7);
+  }
   Wire.beginTransmission(ADRESSE_ROUE);
   Wire.write(id);
-  Wire.write(value);
+  Wire.write(data);
   Wire.endTransmission();
 }
 
 /*
-   Fonction qui gère la réception des messages sur le bus I2C central
-
+   @func byte AxisLX retourne la valeure de l'axe X du joystick gauche
+   @param null
+   @return byte
 */
 void receiveEvent(int howMany) {
   message = (uint8_t)Wire.read();
@@ -186,7 +195,7 @@ void receiveEvent(int howMany) {
 
 float JoystickValue(byte v) {
   float tmp = mapfloat(v, 0, 255, -1, 1);
-  if (tmp >= -JOYSTICK_MARGIN || tmp <= JOYSTICK_MARGIN)tmp = 0;
+  if (tmp >= -JOYSTICK_MARGIN && tmp <= JOYSTICK_MARGIN)tmp = 0;
   return tmp;
 }
 
@@ -417,6 +426,8 @@ State setState(State state, int menuPos = -1) {
 */
 bool checkPause() {
   if (ButtonFlanc(ButtonB(), 2)) {
+    sendMotorValue(0, 0);
+    sendMotorValue(1, 0);
     setState(State::PauseGenerale, 0);
     return true;
   }
