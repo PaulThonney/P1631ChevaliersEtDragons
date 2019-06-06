@@ -9,7 +9,7 @@
 //toutes les adresses I2C
 
 #define ADRESSE_INTELLIGENCE_CENTRALE 1 // adresse de l'intelligence centrale, arduino nano sur le PCB Bluetooth
-#define TRAQUAGE_AV 20 // Arduino Nano se trouvant sur le PCB traquage_AV (ici c'est l'angle du servo qui est transmit)
+#define ADDR_TRAQUAGE 20 // Arduino Nano se trouvant sur le PCB ADDR_TRAQUAGE (ici c'est l'angle du servo qui est transmit)
 #define CONTACT 2  //  PCB HMI, Nano se trouvant à gauche lorsqu'on regarde le U depuis sa base. Il gère les plaque de contact et les LED
 #define ADRESSE_ROUE 19// PCB Puissance, "Arduino 2" Nano
 #define TRAQUAGE_AR // Arduino Nano se trouvant sur le PCB traquage_AR (pcb du haut de la tête) il gère la fumée
@@ -44,7 +44,6 @@ byte output = 0;
 //0: null; 1: A; 2: B, 3: NORTH, 4: SOUTH
 bool flancsMontants[] = {false, false, false, false, false};
 byte vie = 3;// Variable qui indique le nombre de vie restante
-int message;//adresse du capteur qui lui parle
 byte anglePixy;
 byte sonEtVibreur; //4 premiers bits: buzzer; 4 derniers bits: vibreur
 
@@ -163,8 +162,8 @@ void loopManuel() {
 
   sendMotorValue(0, speed1);
   sendMotorValue(1, speed2);
-  Serial.println("speed1:" + String(speed1));
-  Serial.println("speed2:" + String(speed2));
+  //Serial.println("speed1:" + String(speed1));
+  //Serial.println("speed2:" + String(speed2));
 }
 
 void sendMotorValue(byte id, int value) {
@@ -187,10 +186,15 @@ void sendMotorValue(byte id, int value) {
 */
 void receiveEvent(int howMany) {
   Serial.println("howMany: " + String(howMany));
-  message = (uint8_t)Wire.read();
-  if (message == TRAQUAGE_AV){
-    anglePixy = (uint8_t)Wire.read();//récupère l'angle reçu
-    Serial.println("Angle Pixy: " + String(anglePixy));
+  int message = (uint8_t)Wire.read();
+  switch (currentState) {
+    case State::Automatique:
+      int idPixy = (uint8_t)Wire.read();
+      if (message == ADDR_TRAQUAGE) {
+        anglePixy = (uint8_t)Wire.read();//récupère l'angle reçu
+        Serial.println("Angle Pixy: " + String(anglePixy));
+      }
+      break;
   }
 }
 
@@ -370,6 +374,7 @@ bool ButtonSELECT() {
 bool ButtonFlanc(bool button, byte flancId) {
   bool temp = false;
   if (button && !flancsMontants[flancId]) {
+    Serial.println("BUTTON PRESSED: "+String(flancId));
     temp = true;
   }
   flancsMontants[flancId] = button;
@@ -415,6 +420,7 @@ State setState(State state, int menuPos = -1) {
     Serial.print(stateMenuPos);
     Serial.println();
   */
+  Serial.println("Set State: "+String(state));
   if (currentState == state)return currentState; // Evite de traiter inutilement les données s'il n'y a pas de changement
   //previousState = currentState; // non utilisé car remplacé par le savedMode
   currentState = state;
