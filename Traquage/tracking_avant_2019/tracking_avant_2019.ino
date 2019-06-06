@@ -1,12 +1,6 @@
 // Code de l'Arduino Nano gérant le traquage avant du Minotaure
-// Dany VALADO
-// 01.07.2018
-// Ce qu'il reste à ajouter dans le code :
-//  - mode pause
-//  - les capteurs laser (Lidar)
-//  - fluidifier la rotation du servo lors de la recherche de cible
-//  - contrôler que les proportions de la taille de l'objet détecté par la Pixy corresponde à la taille de référence
-//  - développer le code pour qu'il puisse prendre en compte plusieurs cibles
+// Paul THONNEY et Maxime SCHARWATH
+// 06.06.19
 
 #include <SPI.h> //comunication avec la Pixy
 #include <Wire.h> //I2C
@@ -48,15 +42,16 @@ void loop() {
     PositionX = pixy.blocks[0].x;
     //Serial.println(posObject(pixy.blocks[0].x));
     float posObj = posObject(pixy.blocks[0].x);
-    float diff = 5*abs(abs(posObj)-abs(posServo()));
-     Serial.println(diff);
-    if(posObj<0){
-      servo.write(servo.read()-diff);
-    }else if(posObj>0){
-      servo.write(servo.read()+diff);
+    float diff = 5 * abs(abs(posObj) - abs(posServo()));
+    Serial.println(diff);
+    if (posObj < 0) {
+      servo.write(servo.read() - diff);
+    }
+    else if (posObj > 0) {
+      servo.write(servo.read() + diff);
     }
 
-    
+
   }
 }
 
