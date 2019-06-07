@@ -1,3 +1,4 @@
+
 /* Code de l'Arduino gérant l'intelligence centrale du Minotaure
   Son but est de récolter toutes les informations des capteurs et de prendre des décisions en conséquence
   @author: Dany VALADO (2018) Lucien PRUVOT Paul THONNEY
@@ -8,12 +9,12 @@
 #include <Wire.h> //I2C
 //toutes les adresses I2C
 
-#define ADRESSE_INTELLIGENCE_CENTRALE 1 // adresse de l'intelligence centrale, arduino nano sur le PCB Bluetooth
+#define ADRESSE_INTELLIGENCE_CENTRALE 100 // adresse de l'intelligence centrale, arduino nano sur le PCB Bluetooth
 #define ADDR_TRAQUAGE 20 // Arduino Nano se trouvant sur le PCB ADDR_TRAQUAGE (ici c'est l'angle du servo qui est transmit)
 #define CONTACT 2  //  PCB HMI, Nano se trouvant à gauche lorsqu'on regarde le U depuis sa base. Il gère les plaque de contact et les LED
 #define ADRESSE_ROUE 19// PCB Puissance, "Arduino 2" Nano
 #define SON // PCB HMI,  Nano se trouvant à droite lorsqu'on regarde le U depuis sa base. Il gère le HP
-
+#define ADDR_EYES 69
 //DEFINE ROBOT
 
 #define MAX_LIFE 6
@@ -62,6 +63,10 @@ bool isStartedState = false;
 
 int stateMenuPos = 0; // Position du curseur
 
+unsigned long askResponseAt;
+bool waitingResponse = false;
+
+
 
 //AUTOMATIQUE
 long lastUpdateHead = 0;
@@ -85,7 +90,12 @@ void setup() {
 
 void loop() {
   communicationManette(); // On commence par communiquer les dernières infos avec la manette
-
+  //Serial.println(waitingResponse);
+  if (millis() > askResponseAt + 25) {
+    askResponseAt = 0;
+    waitingResponse = false;
+  }
+  //return;
   switch (currentState) {
     case State::Automatique: { // Mode automatique du robot
         loopAutomatique();
@@ -134,19 +144,45 @@ bool hurt(byte dmg) {
 */
 void loopAutomatique() {
   if (onStartState()) {//Seulement la première fois qu'il rentre dans la loop
-    Wire.beginTransmission(ADDR_TRAQUAGE);
-    Wire.write(0x1E);
-    Wire.endTransmission();
+    if (!waitingResponse) {
+      Wire.beginTransmission(ADDR_TRAQUAGE);
+      Wire.write(0x1E);
+      Wire.endTransmission();
+    }
   }
 
   if (checkPause()) { // quitte directement la loop si la pause est pressée et évite que le "state" puisse être changé dans la fonction
     return;
   }
 
-  if (millis() > lastUpdateHead + 25) {//demande à la pixy ces valeurs toutes les 25ms
-    Wire.beginTransmission(ADDR_TRAQUAGE);
-    Wire.write(0x3E);
-    Wire.endTransmission();
+  if (millis() > lastUpdateHead + 100) {//demande à la pixy ces valeurs toutes les 25ms
+    if (!waitingResponse) {
+      waitingResponse = true;
+      Wire.requestFrom(ADDR_TRAQUAGE, 3);   // request 6 bytes from slave device #8
+      uint8_t i = 0;
+      uint8_t rawData[3] = {0, 0, 0};
+      while (Wire.available()) {
+        byte b = Wire.read();
+        Serial.println(String(i) + " " + String(b));
+        switch (i) {
+          case 0: headAngle = map(b, 0, 180, -90, 90); break;
+          case 1: targetDistance = b; break;
+          case 2: isFindTarget = b; break;
+        }
+        i++;
+      }
+      waitingResponse = false;
+      Wire.endTransmission();
+      lastUpdateHead = millis();
+      Serial.println("Servo: " + String(headAngle) + " Distance: " + String(targetDistance) + " isTracking: " + String(isFindTarget));
+
+    }
+    if (!waitingResponse) {
+      Wire.beginTransmission(ADDR_EYES);
+      Wire.write(5);
+      Wire.write((3 << 3) | map(headAngle, -90, 90, 0, 6));
+      Wire.endTransmission();
+    }
   }
 
   //headAngle;
@@ -154,7 +190,7 @@ void loopAutomatique() {
   //isFindTarget;
 
 
-  output = 4;
+  output = 26;
 }
 
 /*
@@ -163,8 +199,19 @@ void loopAutomatique() {
 */
 void loopManuel() {
   if (onStartState()) {//Seulement la première fois qu'il rentre dans la loop
-    Wire.beginTransmission(ADDR_TRAQUAGE);
-    Wire.write(0x2E);
+
+    if (!waitingResponse) {
+      Wire.beginTransmission(ADDR_TRAQUAGE);
+      Wire.write(0x2E);
+      Wire.endTransmission();
+    }
+
+  }
+
+  if (!waitingResponse) {
+    Wire.beginTransmission(ADDR_EYES);
+    Wire.write(5);
+    Wire.write((map(AxisLX(), 0, 255, 0, 6) << 3) | map(AxisLY(), 0, 255, 0, 6));
     Wire.endTransmission();
   }
 
@@ -175,6 +222,7 @@ void loopManuel() {
 
   float jX = JoystickValue(AxisLX());
   float jY = JoystickValue(AxisLY());
+
 
   float hyp = sqrt(jX * jX + jY * jY);
 
@@ -201,10 +249,12 @@ void sendMotorValue(byte id, int value) {
   if ((value < 0)) {
     bitSet(data, 7);
   }
-  Wire.beginTransmission(ADRESSE_ROUE);
-  Wire.write(id);
-  Wire.write(data);
-  Wire.endTransmission();
+  if (!waitingResponse) {
+    Wire.beginTransmission(ADRESSE_ROUE);
+    Wire.write(id);
+    Wire.write(data);
+    Wire.endTransmission();
+  }
 }
 
 /*
@@ -214,18 +264,14 @@ void sendMotorValue(byte id, int value) {
 */
 void receiveEvent(int howMany) {
   Serial.println("howMany: " + String(howMany));
+
+  waitingResponse = false;
+  Serial.println(String(millis() - askResponseAt) + "ms");
+
   byte addr = Wire.read();
   switch (addr) {
     case ADDR_TRAQUAGE:
-      byte servo = Wire.read();
-      byte distance = Wire.read();
-      byte isTracking = Wire.read();
-      lastUpdateHead = millis();
 
-      headAngle = map(servo, 0, 180, -90, 90);
-      targetDistance = distance;
-      isFindTarget = isTracking;
-      Serial.println("Servo: " + String(servo) + " Distance: " + String(distance) + " isTracking: " + String(isTracking));
       break;
   }
 }
@@ -406,7 +452,7 @@ bool ButtonSELECT() {
 bool ButtonFlanc(bool button, byte flancId) {
   bool temp = false;
   if (button && !flancsMontants[flancId]) {
-    Serial.println("BUTTON PRESSED: " + String(flancId));
+    //Serial.println("BUTTON PRESSED: " + String(flancId));
     temp = true;
   }
   flancsMontants[flancId] = button;
@@ -452,7 +498,7 @@ State setState(State state, int menuPos = -1) {
     Serial.print(stateMenuPos);
     Serial.println();
   */
-  Serial.println("Set State: " + String(state));
+  //Serial.println("Set State: " + String(state));
   if (currentState == state)return currentState; // Evite de traiter inutilement les données s'il n'y a pas de changement
   isStartedState = false;
   //previousState = currentState; // non utilisé car remplacé par le savedMode
@@ -461,9 +507,11 @@ State setState(State state, int menuPos = -1) {
 }
 
 bool onStartState() {
-  if (!isStartedState)return false;
-  isStartedState = true;
-  return isStartedState;
+  if (!isStartedState) {
+    isStartedState = true;
+    return true;
+  }
+  return false;
 }
 /*
    @func bool checkPause Vérifie s'il y a une demande de pause lors de la partie

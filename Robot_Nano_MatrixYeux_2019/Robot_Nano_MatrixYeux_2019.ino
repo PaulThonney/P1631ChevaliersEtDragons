@@ -35,27 +35,21 @@ int pauseStarted = 1;
 int gameResumed = 0;
 int previousIdle = 0;
 int previousCurrentTime = 0;
-int gotHit = 0;
 int speaker = 9;
-int animation = 0;
 int hitSound = 164;
 int recvValue = -1;
 
-int Mi0 = 329;
-int Fa0 = 349;
-int Fa0b = 370;
-int Sol0 = 392;
-int La = 440;
-int Si = 493;
-int Do = 523;
-int note = 0;
-int son = 0;
+int xPosPupil = 0;
+int yPosPupil = 0;
+
+byte animation = 0;
+bool isPlaying = false;
 
 void setup() {
 
-  Wire.begin(8); //Begin with adress 8
+  Wire.begin(69); //Begin with adress 8
   Wire.onReceive(receiveEvent); // register event
-  //Serial.begin(9600);
+  Serial.begin(9600);
 
 
   pinMode(speaker, OUTPUT); // Set buzzer - pin 9 as an output
@@ -257,8 +251,7 @@ void wink(int nb_matrix, int xPupil1, int yPupil1, int xPupil2, int yPupil2)
   ////Serial.println(yPupil1);
 }
 
-void winkBoth(int xPupil1, int yPupil1, int xPupil2, int yPupil2)
-{
+void winkBoth(int xPupil1, int yPupil1, int xPupil2, int yPupil2) {
   if (currentTime < 25)
   {
     refresh(matrix0);
@@ -329,8 +322,7 @@ void winkBoth(int xPupil1, int yPupil1, int xPupil2, int yPupil2)
 
 }
 
-void angry()
-{
+void angry() {
   refresh(matrix0);
   refresh(matrix1);
   drawCurrentPupil(matrix0, 3, 3, LED_YELLOW);
@@ -341,8 +333,8 @@ void angry()
   matrix[matrix1].writeDisplay();
 }
 
-void idleAnim2()
-{
+void idleAnim2() {
+  isPlaying = true;
   if (currentTime < 100)
   {
     interval = random(3500, 8000); //l'animation met au total 3450ms. Pour qu'elle s'effectue jusqu'au bout, on redéfinit ici l'interval
@@ -463,8 +455,8 @@ void idleAnim2()
     matrix[matrix0].writeDisplay();
     matrix[matrix1].writeDisplay();
   }
-  else
-  {
+  else {
+    isPlaying = false;
     refresh(matrix0);
     refresh(matrix1);
     drawCurrentPupil(matrix0, 3, 3, LED_YELLOW);
@@ -473,12 +465,12 @@ void idleAnim2()
     matrix[matrix1].drawBitmap(0, 0, wideOpen_bmp, 8, 8, LED_GREEN);
     matrix[matrix0].writeDisplay();
     matrix[matrix1].writeDisplay();
-    previousIdle = idle;
-    idle = 0;
   }
 }
-void idleAnim3()
-{
+
+
+void idleAnim3() {
+  isPlaying = true;
   if (currentTime < 75)
   {
     refresh(matrix0);
@@ -570,39 +562,28 @@ void idleAnim3()
     posy = 3;
     previousIdle = idle;
     idle = 0;
+    isPlaying = false;
   }
 }
 
-void pauseAnim()
-{
-  if (gameResumed == 0)
-  {
+void pauseAnim() {
+  if (gameResumed == 0) {
     matrix[matrix1].setTextWrap(false);  // we dont want text to wrap so it scrolls nicely
     matrix[matrix1].setTextSize(1);
     matrix[matrix0].setTextWrap(false);  // we dont want text to wrap so it scrolls nicely
     matrix[matrix0].setTextSize(1);
     matrix[matrix1].setTextColor(LED_RED);
     matrix[matrix0].setTextColor(LED_RED);
-    tone(speaker, 880, 40);
     decalage = 7;
     previousCurrentTime = currentTime;
     ancientPosx = posx;
     ancientPosy = posy;
     gameResumed = 1;
-    //Serial.print("PAUSE WITH ");
-    //Serial.print(currentMillis);
-    //Serial.print(" - ");
-    //Serial.print(previousMillis);
-    //Serial.print(" = ");
-    //Serial.println(currentTime);
-    //Serial.print("AND INTERVAL = ");
-    //Serial.println(interval);
     resetTime();
   }
 
 
-  if (currentTime % 70 == 0)
-  {
+  if (currentTime % 70 == 0) {
     //resetTime();
     refresh(matrix1);
     matrix[matrix1].setCursor(decalage, 0);
@@ -620,43 +601,8 @@ void pauseAnim()
 }
 
 
-void shieldBlockAnim()
-{
-  if (gameResumed == 0 || animation != 1 && animation != 0)
-  {
-
-    previousCurrentTime = currentTime;
-    ancientPosx = posx;
-    ancientPosy = posy;
-    gameResumed = 1;
-    animation = 1;
-    //Serial.print("PAUSE WITH ");
-    //Serial.print(currentMillis);
-    //Serial.print(" - ");
-    //Serial.print(previousMillis);
-    //Serial.print(" = ");
-    //Serial.println(currentTime);
-    //Serial.print("AND INTERVAL = ");
-    //Serial.println(interval);
-    resetTime();
-    hitSound = 164;
-  }
-  if (currentTime <= 100)
-    tone(speaker, hitSound / 2);
-  else if (currentTime <= 200)
-    noTone(speaker);
-  else if ( hitSound <= 293)
-  {
-    tone(speaker, hitSound);
-    hitSound = hitSound + 1;
-    //Serial.println(hitSound);
-  }
-  else
-  {
-    noTone(speaker);
-    animation = 0;
-  }
-
+void shieldBlockAnim() {
+  closeAnim(1000);
   refresh(matrix0);
   refresh(matrix1);
   matrix[matrix0].drawBitmap(0, 0, shieldBlock_bmp, 8, 8, LED_GREEN);
@@ -665,46 +611,10 @@ void shieldBlockAnim()
   matrix[matrix1].writeDisplay();
   posx = 3;
   posy = 3;
-  previousIdle = idle;
-  idle = 0;
-
 }
 
-void hitAnim(){
-  if (gameResumed == 0 || animation != 2 && animation != 0)
-  {
-
-    previousCurrentTime = currentTime;
-    ancientPosx = posx;
-    ancientPosy = posy;
-    gameResumed = 1;
-    animation = 2;
-    //Serial.print("PAUSE WITH ");
-    //Serial.print(currentMillis);
-    //Serial.print(" - ");
-    //Serial.print(previousMillis);
-    //Serial.print(" = ");
-    //Serial.println(currentTime);
-    //Serial.print("AND INTERVAL = ");
-    //Serial.println(interval);
-    resetTime();
-    hitSound = 164;
-  }
-  if (currentTime <= 100)
-    tone(speaker, hitSound / 2);
-  else if (currentTime <= 200)
-    noTone(speaker);
-  else if ( hitSound >= 35)
-  {
-    tone(speaker, hitSound);
-    hitSound = hitSound - 1;
-  }
-  else
-  {
-    noTone(speaker);
-    animation = 0;
-  }
-
+void hitAnim() {
+  closeAnim(1000);
   refresh(matrix0);
   refresh(matrix1);
   matrix[matrix0].drawBitmap(0, 0, gotHitLeft_bmp, 8, 8, LED_RED);
@@ -715,15 +625,10 @@ void hitAnim(){
   matrix[matrix1].writeDisplay();
   posx = 3;
   posy = 3;
-  previousIdle = idle;
-  idle = 0;
-
 }
 
 
-void deathAnim()
-{
-
+void deathAnim() {
   refresh(matrix0);
   refresh(matrix1);
   matrix[matrix0].drawBitmap(0, 0, dead_bmp, 8, 8, LED_RED);
@@ -732,111 +637,42 @@ void deathAnim()
   matrix[matrix1].writeDisplay();
   posx = 3;
   posy = 3;
-  previousIdle = idle;
-  idle = 0;
+}
 
-  if (gameResumed == 0 || animation != 3 && animation != 0)
-  {
-
-    previousCurrentTime = currentTime;
-    ancientPosx = posx;
-    ancientPosy = posy;
-    gameResumed = 1;
-    animation = 3;
-    //Serial.print("PAUSE WITH ");
-    //Serial.print(currentMillis);
-    //Serial.print(" - ");
-    //Serial.print(previousMillis);
-    //Serial.print(" = ");
-    //Serial.println(currentTime);
-    //Serial.print("AND INTERVAL = ");
-    //Serial.println(interval);
-    resetTime();
-
-  }
-  jumpNote(Si, Do, 30);
-  jumpNote(La, Si, 20);
-  jumpNote(Sol0, La, 20);
-  jumpNote(Fa0b, Sol0, 40);
-  tone(speaker, Mi0);
-  delay(1000);
-  noTone(speaker);
-  animation = 0;
+void controlledEyeAnim() {
+  refresh(matrix0);
+  refresh(matrix1);
+  drawCurrentPupil(matrix0, xPosPupil, yPosPupil, LED_YELLOW);
+  drawCurrentPupil(matrix1, xPosPupil, yPosPupil, LED_YELLOW);
+  matrix[matrix0].drawBitmap(0, 0, wideOpen_bmp, 8, 8, LED_GREEN);
+  matrix[matrix1].drawBitmap(0, 0, wideOpen_bmp, 8, 8, LED_GREEN);
+  matrix[matrix0].writeDisplay();
+  matrix[matrix1].writeDisplay();
 }
 
 
-void jumpNote(int noteA, int noteB, int moduloNote)
-{
-  note = noteA;
-  tone(speaker, noteA);
-  delay(500);
-  for (son = 0; son <= 1000; son++)
-  {
-    tone(speaker, noteA);
-    if (son % moduloNote == 0)
-    {
-      noteA = noteA + 1;
-    }
-  }
-  tone(speaker, noteB);
-  delay(475);
-  noTone(speaker);
-  delay(25);
-}
-
-
-void idleCheck()
-{
-  switch (idle)
-  {
-    case 1:
+void idleCheck() {
+  switch (idle) {
+    default:
+    case 0:
       winkBoth(ancientPosx, ancientPosy, posx, posy);
       break;
-    case 2:
+    case 1:
       idleAnim2();
       break;
-    case 3:
+    case 2:
       wink(matrix0, ancientPosx, ancientPosy, ancientPosx, ancientPosy);
       break;
-    case 4:
+    case 3:
       wink(matrix1, ancientPosx, ancientPosy, ancientPosx, ancientPosy);
       break;
-    case 5:
+    case 4:
       idleAnim3();
       break;
   }
 }
-void resumeGame()
-{
-  /* //Serial.print("GAME RESUMED WITH ");
-    //Serial.print(previousMillis);
-    //Serial.print(" - ");
-    //Serial.print(previousCurrentTime);
-    previousMillis = previousMillis - previousCurrentTime;
 
-
-    //Serial.print(" = ");
-    //Serial.print(previousMillis);
-    //Serial.print(" = ");
-    //Serial.print(currentMillis);
-    //Serial.print(" - ");
-    //Serial.print(previousMillis);
-    //Serial.print(" = ");
-    //Serial.println(currentMillis - previousMillis);
-    //    if(pause == 1)
-    //    {
-    //      tone(speaker, 440, 40);
-    //    }
-    //Serial.print("AND INTERVAL = ");
-    //Serial.print(interval);
-    //Serial.print(" + ");
-    //Serial.print(currentTime);
-    //Serial.print(" = ");
-    interval = interval + currentTime;
-
-    //Serial.println(interval);
-    idle = previousIdle;
-  */
+void resumeGame() {
   refresh(matrix0);
   refresh(matrix1);
   matrix[matrix0].drawBitmap(0, 0, wideOpen_bmp, 8, 8, LED_GREEN);
@@ -847,109 +683,74 @@ void resumeGame()
   matrix[matrix1].writeDisplay();
   posx = 3;
   posy = 3;
-  idle = 0;
   resetTime();
-  gameResumed = 0;
-  // idleCheck();
 }
 
-void resetTime()
-{
+void resetTime() {
   previousMillis = currentMillis;
-  //Serial.println("RESET TIME");
-
 }
-void timeCheck()
-{
-  if ((currentMillis - previousMillis) >= interval)
-  {
 
+void timeCheck() {
+  if ((currentMillis - previousMillis) >= interval) {
     ancientPosx = posx;
     ancientPosy = posy;
     randomIdle = random(1, 11);
     posx = random(2, 5);
     posy = random(2, 5);
-    if (randomIdle <= 4)
-    {
-      idle = 1;
-    }
-    else if (randomIdle == 5)
-    {
-      idle = 2;
-    }
-    else if (randomIdle <= 7)
-    {
-      idle = 3;
-    }
-    else if (randomIdle <= 9)
-    {
-      idle = 4;
-    }
-    else
-    {
-      idle = 5;
-    }
+    idle = random(0, 4);
     interval = random(1000, 5000);
     resetTime();
+  }
+}
+
+void defaultAnim() {
+  idleCheck();
+  timeCheck();
+}
+
+unsigned long animStartAt;
+void setAnim(byte anim) {
+  animStartAt = millis();
+  animation = anim;
+}
+
+void closeAnim(int duration) {
+  if (millis() > animStartAt + duration) {
+    setAnim(0);
   }
 }
 
 void loop() {
   currentMillis = millis();
   currentTime = currentMillis - previousMillis;
-  hitAnim();
-  return;
-  //tone(speaker, 200);
-  // Si la dernière valeur reçue vaut
-  if (recvValue == 1) {
-    gotHit = 1;
-  } else if (recvValue == 2) {
-    gotHit = 2;
-  } else if (recvValue == 3) {
-    pause = 1;
-  } else if (recvValue == 4) {
-    // On remet tout à 0 car on restart le jeu
-    pause = 0;
-    gotHit = 0;
-    animation = 0;
-  }
+  switch (animation) {
+    default:
+    case 0: defaultAnim(); break;
+    case 1: hitAnim(); break;
+    case 2: shieldBlockAnim(); break;
+    case 3: deathAnim(); break;
+    case 4: pauseAnim(); break;
+    case 5: controlledEyeAnim(); break;
 
-  if (pause == 1)
-  {
-    pauseAnim();
   }
-  else if (gotHit == 1 || animation == 1)
-  {
-    shieldBlockAnim();
-  }
-  else if (gotHit == 5 || animation == 3)
-  {
-    deathAnim();
-  }
-  else if (gotHit == 2 || animation == 2)
-  {
-    hitAnim();
-  }
-  else
-  {
+}
 
-    if (gameResumed == 1) // Cas où on reprend la partie, on s'est fait touché pendant la pause et le bit d'information de touche
-    { // renvoie encore "1" => if(gameResumed == 1 & gotHit == 1){faire en sorte qu'on ne se soit pas pris de dégât}
-      resumeGame();      // à voir dans le programme des plaques de contact si le bit "pause" lui est envoyé.
-    }
-    idleCheck();
-    timeCheck();
-  }
-
-
+void setEyePos(int x, int y) {
+  xPosPupil = map(x, -3, 3, 0, 6);
+  yPosPupil = map(y, -3, 3, 0, 6);
 }
 
 void receiveEvent(int howMany) {
-  //Serial.println(" recieve event ");
-  //gotHit = Wire.read();    // receive byte as an integer
-  recvValue = Wire.read();
-  gotHit = recvValue;
-  //Serial.println(recvValue);
+  byte anim = Wire.read();
+  setAnim(anim);
+  if (howMany >= 2) {
+    byte data = Wire.read();
+    xPosPupil = data & 0b111;
+    yPosPupil = (data & 0b111000) >> 3;
+  }
+
+  Serial.println(String(anim)+" "+String(xPosPupil)+" "+String(yPosPupil));
+
 }
 
 /*

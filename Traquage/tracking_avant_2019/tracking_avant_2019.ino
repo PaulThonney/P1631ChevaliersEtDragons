@@ -12,7 +12,7 @@ Pixy pixy; //donne un nom à la pixy
 Servo servo; // donne un nom de Servomoteur
 
 //adresse I2C
-#define ADRESSE_INTELLIGENCE_CENTRALE 1
+#define ADRESSE_INTELLIGENCE_CENTRALE 100
 #define ADRESSE_TRACKAGE 20
 #define PIN_SERVO 5
 #define TEMPS_CONTINUE_RECHERCHE 2000
@@ -28,6 +28,8 @@ bool wantedMessage = false;
 int posObj; //position de l'objet
 int distance;
 
+int nbRequest;
+
 float posServo() {
   return mapfloat(servo.read(), 0, 180, -1, 1);
 }
@@ -39,6 +41,7 @@ void setup() {
 
   Wire.begin(ADRESSE_TRACKAGE);
   Wire.onReceive(receiveEvent);
+  Wire.onRequest(requestEvent);
 
   servo.attach(PIN_SERVO); //atribue une pin avec PWM au servomoteur
   servo.write(90); //met la tête droite
@@ -55,22 +58,32 @@ void loop() {
 
 unsigned int count = 0;
 
+
+void requestEvent() {
+  nbRequest++;
+  Serial.println("REQUEST "+String(nbRequest));
+  Serial.println(byte(servo.read()));
+  Serial.println(byte(distance));
+  Serial.println(byte(isTracking));
+
+  Wire.write((servo.read()));
+  Wire.write((distance));
+  Wire.write((isTracking));
+}
+
 void communication() {
+  return;
   if (!wantedMessage)return;
   wantedMessage = false;
-
+  Serial.println("SEND DATA");
   Wire.beginTransmission(ADRESSE_INTELLIGENCE_CENTRALE);
   Wire.write(ADRESSE_TRACKAGE);
-  Wire.write(servo.read());
-  Wire.write(distance);
-  Wire.write(isTracking);
   Wire.endTransmission();
 }
 
 void tracking() {
   uint16_t blocks; //nombre d'objets détecté par la Pixy
-  isTracking = pixy.getBlocks();
-  if (isTracking) {
+  if (pixy.getBlocks()) {
     isTracking = true;
     blocks = pixy.getBlocks();
     lastTimeViewObject = millis();
@@ -100,6 +113,7 @@ void tracking() {
     if (millis() < lastTimeViewObject + TEMPS_ATTENTE_RECHERCHE) {
       return;
     }
+    isTracking = false;
     if (!needToTrack) {
       servo.write(90);
       return;
@@ -129,8 +143,8 @@ void tracking() {
 }
 
 void receiveEvent(int howMany) {
-  Serial.println("howMany: " + String(howMany));
   int message = (uint8_t)Wire.read();
+  Serial.println("Command: " + String(message));
   switch (message) {
     case 0x1E:
       needToTrack = true;
@@ -139,7 +153,7 @@ void receiveEvent(int howMany) {
       needToTrack = false;
       break;
     case 0x3E:
-      wantedMessage = true;
+      //wantedMessage = true;
       break;
   }
 }
