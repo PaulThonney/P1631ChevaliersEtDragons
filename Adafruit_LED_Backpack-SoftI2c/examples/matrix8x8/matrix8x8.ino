@@ -3,18 +3,17 @@
   Written by Maxime Scharwath.
  ****************************************************/
 
-#include <SoftWire.h>
-#include <AsyncDelay.h>
+#include "SoftwareI2C.h"
 #include <Adafruit_GFX.h>
 #include "Adafruit_LEDBackpack_Soft.h"
 
-Adafruit_8x8matrix matrix = Adafruit_8x8matrix(5,6);
+Adafruit_8x8matrix matrix = Adafruit_8x8matrix(3,2);
 
 void setup() {
   Serial.begin(9600);
   Serial.println("8x8 LED Matrix Test");
   
-  matrix.begin(0x70);  // pass in the address
+  matrix.begin(0x71);  // pass in the address
 }
 
 static const uint8_t PROGMEM

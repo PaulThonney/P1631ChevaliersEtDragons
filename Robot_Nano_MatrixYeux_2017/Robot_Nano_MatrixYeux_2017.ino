@@ -1,5 +1,6 @@
-#include <Adafruit_LEDBackpack.h>
 #include <Wire.h>
+#include "SoftwareI2C.h"
+#include "Adafruit_LEDBackpack_Soft.h"
 
 #define matrix0 0
 #define matrix1 1
@@ -12,7 +13,10 @@
 
 
 //Adafruit_BicolorMatrix matrix = Adafruit_BicolorMatrix();
-Adafruit_BicolorMatrix matrix[2];
+Adafruit_BicolorMatrix matrix[2] = {
+  Adafruit_BicolorMatrix(A0,2),
+  Adafruit_BicolorMatrix(A0,2)
+  };
 int otherMatrix = 0;
 unsigned long previousMillis = 0;
 unsigned long currentMillis = 0;
@@ -49,7 +53,7 @@ int Do = 523;
 
 void setup() {
 
-  Wire.begin(5,19); //Begin with adress 8
+  Wire.begin(5); //Begin with adress 8
   Wire.onReceive(receiveEvent); // register event
   //Serial.begin(9600);
 

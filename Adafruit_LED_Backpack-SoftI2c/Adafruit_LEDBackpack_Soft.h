@@ -12,8 +12,7 @@
 #endif
 
 
-#include <SoftWire.h>
-#include <AsyncDelay.h>
+#include "SoftwareI2C.h"
 
 #include "Adafruit_GFX.h"
 
@@ -53,7 +52,9 @@ class Adafruit_LEDBackpack_Soft {
   void init(uint8_t a);
  protected:
   uint8_t i2c_addr;
-  SoftWire sWire;
+  SoftwareI2C sWire;
+  byte SDA;
+  byte SCL;
 };
 
 class Adafruit_AlphaNum4 : public Adafruit_LEDBackpack_Soft {

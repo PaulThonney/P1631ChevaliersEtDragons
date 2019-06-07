@@ -3,8 +3,7 @@
   Written by Maxime Scharwath.
  ****************************************************/
 
-#include <SoftWire.h>
-#include <AsyncDelay.h>
+#include "SoftwareI2C.h"
 
 #include "Adafruit_LEDBackpack_Soft.h"
 #include "Adafruit_GFX.h"
@@ -183,15 +182,15 @@ void Adafruit_LEDBackpack_Soft::blinkRate(uint8_t b) {
   this->sWire.endTransmission();
 }
 
-Adafruit_LEDBackpack_Soft::Adafruit_LEDBackpack_Soft(byte SDA, byte SCL) : sWire(SDA, SCL){
-
+Adafruit_LEDBackpack_Soft::Adafruit_LEDBackpack_Soft(byte SDA, byte SCL) {
+  this->SDA = SDA;
+  this->SCL = SCL;
 }
 
 void Adafruit_LEDBackpack_Soft::begin(uint8_t _addr = 0x70) {
   i2c_addr = _addr;
 
-  this->sWire.setTimeout_ms(40);
-  this->sWire.begin();
+  this->sWire.begin(this->SDA,this->SCL);
 
   this->sWire.beginTransmission(i2c_addr);
   this->sWire.write(0x21);  // turn on oscillator
