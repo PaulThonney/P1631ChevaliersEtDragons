@@ -26,7 +26,7 @@ bool lastSideObject;
 bool needToTrack = false;
 bool wantedMessage = false;
 int posObj; //position de l'objet
-int distance;
+byte distance;
 
 int nbRequest;
 

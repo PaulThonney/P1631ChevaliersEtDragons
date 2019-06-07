@@ -138,6 +138,7 @@ bool hurt(byte dmg) {
   return true;
 }
 
+int nbRequest;
 /*
    Fonction qui gère le mode automatique des robots
    Pour le moment elle récupère uniquement l'angle du servo et le transmet aux roues.
@@ -155,39 +156,39 @@ void loopAutomatique() {
     return;
   }
 
-  if (millis() > lastUpdateHead + 100) {//demande à la pixy ces valeurs toutes les 25ms
+  if (millis()-lastUpdateHead >  20) {//demande à la pixy ces valeurs toutes les 25ms
     if (!waitingResponse) {
+      nbRequest++;
       waitingResponse = true;
-      Wire.requestFrom(ADDR_TRAQUAGE, 3);   // request 6 bytes from slave device #8
+      Wire.requestFrom(ADDR_TRAQUAGE, 3, true);   // request 6 bytes from slave device #8
       uint8_t i = 0;
-      uint8_t rawData[3] = {0, 0, 0};
       while (Wire.available()) {
         byte b = Wire.read();
-        Serial.println(String(i) + " " + String(b));
         switch (i) {
           case 0: headAngle = map(b, 0, 180, -90, 90); break;
           case 1: targetDistance = b; break;
           case 2: isFindTarget = b; break;
         }
+        if (i >= 2) {
+          waitingResponse = false;
+          lastUpdateHead = millis();
+          Serial.println(String(nbRequest)+" Servo: " + String(headAngle) + " Distance: " + String(targetDistance) + " isTracking: " + String(isFindTarget));
+        }
         i++;
       }
-      waitingResponse = false;
-      Wire.endTransmission();
-      lastUpdateHead = millis();
-      Serial.println("Servo: " + String(headAngle) + " Distance: " + String(targetDistance) + " isTracking: " + String(isFindTarget));
+
 
     }
+
     if (!waitingResponse) {
       Wire.beginTransmission(ADDR_EYES);
       Wire.write(5);
       Wire.write((3 << 3) | map(headAngle, -90, 90, 0, 6));
       Wire.endTransmission();
     }
+
   }
 
-  //headAngle;
-  //targetDistance;
-  //isFindTarget;
 
 
   output = 26;
