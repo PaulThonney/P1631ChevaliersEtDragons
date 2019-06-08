@@ -139,6 +139,32 @@ bool hurt(byte dmg) {
 }
 
 int nbRequest;
+
+bool getData(int addr, byte *buffer, int nbBytes) {
+  if (waitingResponse)return false;
+  nbRequest++;
+  waitingResponse = true;
+  Wire.requestFrom(addr, nbBytes); // Request the transmitted two bytes from the two registers
+  if (Wire.available() <= nbBytes) {
+    for (int i = 0; i < nbBytes; i++) {
+      buffer[i] = Wire.read();
+    }
+    waitingResponse = false;
+    return true;
+  }
+  return false;
+}
+
+bool sendData(int addr, byte *buffer, int nbBytes) {
+  if (waitingResponse)return false;
+  Wire.beginTransmission(addr);
+  for (int i = 0; i < nbBytes; i++) {
+    Wire.write(buffer[i]);
+  }
+  Wire.endTransmission();
+  return true;
+}
+
 /*
    Fonction qui gère le mode automatique des robots
    Pour le moment elle récupère uniquement l'angle du servo et le transmet aux roues.
@@ -156,28 +182,17 @@ void loopAutomatique() {
     return;
   }
 
-  if (millis()-lastUpdateHead >  20) {//demande à la pixy ces valeurs toutes les 25ms
-    if (!waitingResponse) {
-      nbRequest++;
-      waitingResponse = true;
-      Wire.requestFrom(ADDR_TRAQUAGE, 3, true);   // request 6 bytes from slave device #8
-      uint8_t i = 0;
-      while (Wire.available()) {
-        byte b = Wire.read();
-        switch (i) {
-          case 0: headAngle = map(b, 0, 180, -90, 90); break;
-          case 1: targetDistance = b; break;
-          case 2: isFindTarget = b; break;
-        }
-        if (i >= 2) {
-          waitingResponse = false;
-          lastUpdateHead = millis();
-          Serial.println(String(nbRequest)+" Servo: " + String(headAngle) + " Distance: " + String(targetDistance) + " isTracking: " + String(isFindTarget));
-        }
-        i++;
-      }
+  if (millis() - lastUpdateHead >  20) { //demande à la pixy ces valeurs toutes les 25ms
 
+    byte buffer[3];
+    if (getData(ADDR_TRAQUAGE, buffer, 3)) {
+      headAngle = map(buffer[0], 0, 180, -90, 90);
+      targetDistance = buffer[3];
+      isFindTarget = buffer[2];
 
+      waitingResponse = false;
+      lastUpdateHead = millis();
+      Serial.println(String(nbRequest) + " Servo: " + String(headAngle) + " Distance: " + String(targetDistance) + " isTracking: " + String(isFindTarget));
     }
 
     if (!waitingResponse) {
@@ -186,6 +201,7 @@ void loopAutomatique() {
       Wire.write((3 << 3) | map(headAngle, -90, 90, 0, 6));
       Wire.endTransmission();
     }
+
 
   }
 
@@ -239,8 +255,6 @@ void loopManuel() {
 
   sendMotorValue(0, speed1);
   sendMotorValue(1, speed2);
-  //Serial.println("speed1:" + String(speed1));
-  //Serial.println("speed2:" + String(speed2));
 }
 
 void sendMotorValue(byte id, int value) {
@@ -486,23 +500,13 @@ void communicationManette() {
    #param int menuPos
    @return State currentState
 */
-State setState(State state, int menuPos = -1) {
+State setState(State state, int menuPos) {
   if (menuPos > -1) {
     stateMenuPos = menuPos;
   }
-  /*
-    Serial.print("Set State: ");
-    Serial.print(state);
-    Serial.print(" Saved: ");
-    Serial.print(savedMode);
-    Serial.print(" MenuPos: ");
-    Serial.print(stateMenuPos);
-    Serial.println();
-  */
-  //Serial.println("Set State: " + String(state));
   if (currentState == state)return currentState; // Evite de traiter inutilement les données s'il n'y a pas de changement
   isStartedState = false;
-  //previousState = currentState; // non utilisé car remplacé par le savedMode
+  previousState = currentState;
   currentState = state;
   return currentState;
 }
