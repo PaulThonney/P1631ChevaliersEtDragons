@@ -26,7 +26,8 @@ String folders[] = {
   "/other",
   "/hurt",
   "/attack",
-  "/die"
+  "/die",
+  "/growl"
 };
 
 Adafruit_VS1053_FilePlayer musicPlayer = Adafruit_VS1053_FilePlayer(BREAKOUT_RESET, BREAKOUT_CS, BREAKOUT_DCS, DREQ, CARDCS);
