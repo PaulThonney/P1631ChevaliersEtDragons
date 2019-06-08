@@ -82,7 +82,6 @@ int currentMotorValue[2];
 
 void setup() {
   Wire.begin(ADRESSE_INTELLIGENCE_CENTRALE);
-  Wire.onReceive(receiveEvent);
   Serial2.begin(115200);
   Serial.begin(115200);
   Serial.println("Setup completed");
@@ -211,7 +210,7 @@ void loopAutomatique() {
 
   loopHurt();
 
-  if (millis() - lastUpdateHead >  20) { //demande à la pixy ces valeurs toutes les 25ms
+  if (millis() - lastUpdateHead >  25) { //demande à la pixy ces valeurs toutes les 25ms
 
     byte buffer[3];
     if (getData(ADDR_TRAQUAGE, buffer, 3)) {
@@ -230,9 +229,27 @@ void loopAutomatique() {
       Wire.write((3 << 3) | map(headAngle, -90, 90, 0, 6));
       Wire.endTransmission();
     }
-
-
   }
+
+  if (headAngle > -5 && headAngle < 5) {
+    if(isFindTarget){
+      int speed = map(targetDistance, 0, 255, 10, 100);
+      sendMotorValue(0, speed);
+      sendMotorValue(1, speed);
+    }
+
+  } else {
+    int speed = map(abs(headAngle), 0, 90, 10, 100);
+    if (headAngle < 0) {
+      sendMotorValue(0, speed);
+      sendMotorValue(1, -speed);
+    } else {
+      sendMotorValue(0, speed);
+      sendMotorValue(1, -speed);
+    }
+  }
+
+
 
 
 
@@ -300,25 +317,6 @@ void sendMotorValue(byte id, int value) {
     Wire.write(id);
     Wire.write(data);
     Wire.endTransmission();
-  }
-}
-
-/*
-   @func byte AxisLX retourne la valeure de l'axe X du joystick gauche
-   @param null
-   @return byte
-*/
-void receiveEvent(int howMany) {
-  Serial.println("howMany: " + String(howMany));
-
-  waitingResponse = false;
-  Serial.println(String(millis() - askResponseAt) + "ms");
-
-  byte addr = Wire.read();
-  switch (addr) {
-    case ADDR_TRAQUAGE:
-
-      break;
   }
 }
 
