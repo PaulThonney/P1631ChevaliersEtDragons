@@ -17,6 +17,7 @@ Adafruit_BicolorMatrix matrix[2] = {
   Adafruit_BicolorMatrix(A0, 2),
   Adafruit_BicolorMatrix(A0, 2)
 };
+void textAnim(String text, int color, int dur = -1);
 int otherMatrix = 0;
 unsigned long previousMillis = 0;
 unsigned long currentMillis = 0;
@@ -566,14 +567,17 @@ void idleAnim3() {
   }
 }
 
-void pauseAnim() {
+void textAnim(String text, int color, int dur) {
+  if (dur > -1) {
+    closeAnim(dur);
+  }
   if (gameResumed == 0) {
     matrix[matrix1].setTextWrap(false);  // we dont want text to wrap so it scrolls nicely
     matrix[matrix1].setTextSize(1);
     matrix[matrix0].setTextWrap(false);  // we dont want text to wrap so it scrolls nicely
     matrix[matrix0].setTextSize(1);
-    matrix[matrix1].setTextColor(LED_RED);
-    matrix[matrix0].setTextColor(LED_RED);
+    matrix[matrix1].setTextColor(color);
+    matrix[matrix0].setTextColor(color);
     decalage = 7;
     previousCurrentTime = currentTime;
     ancientPosx = posx;
@@ -587,14 +591,14 @@ void pauseAnim() {
     //resetTime();
     refresh(matrix1);
     matrix[matrix1].setCursor(decalage, 0);
-    matrix[matrix1].print("PAUSE");
+    matrix[matrix1].print(text);
     matrix[matrix1].writeDisplay();
     refresh(matrix0);
     matrix[matrix0].setCursor(decalage + 15, 0);
-    matrix[matrix0].print("PAUSE");
+    matrix[matrix0].print(text);
     matrix[matrix0].writeDisplay();
-    decalage = decalage - 1;
-    if (decalage <= -50)
+    decalage--;
+    if (decalage <= -message.length() * 10)
       decalage = 7;
 
   }
@@ -672,20 +676,6 @@ void idleCheck() {
   }
 }
 
-void resumeGame() {
-  refresh(matrix0);
-  refresh(matrix1);
-  matrix[matrix0].drawBitmap(0, 0, wideOpen_bmp, 8, 8, LED_GREEN);
-  matrix[matrix1].drawBitmap(0, 0, wideOpen_bmp, 8, 8, LED_GREEN);
-  drawCurrentPupil(matrix0, ancientPosx, ancientPosy, LED_YELLOW);
-  drawCurrentPupil(matrix1, ancientPosx, ancientPosy, LED_YELLOW);
-  matrix[matrix0].writeDisplay();
-  matrix[matrix1].writeDisplay();
-  posx = 3;
-  posy = 3;
-  resetTime();
-}
-
 void resetTime() {
   previousMillis = currentMillis;
 }
@@ -712,6 +702,7 @@ unsigned long animStartAt;
 void setAnim(byte anim) {
   animStartAt = millis();
   animation = anim;
+  gameResumed = 0;
 }
 
 void closeAnim(int duration) {
@@ -729,9 +720,10 @@ void loop() {
     case 1: hitAnim(); break;
     case 2: shieldBlockAnim(); break;
     case 3: deathAnim(); break;
-    case 4: pauseAnim(); break;
+    case 4: textAnim("PAUSE", LED_RED); break;
     case 5: controlledEyeAnim(); break;
-
+    case 6: textAnim("LOST CONNECTION", LED_RED); break;
+    case 7: textAnim("CONNECTED", LED_GREEN, 1000); break;
   }
 }
 
@@ -749,7 +741,7 @@ void receiveEvent(int howMany) {
     yPosPupil = (data & 0b111000) >> 3;
   }
 
-  Serial.println(String(anim)+" "+String(xPosPupil)+" "+String(yPosPupil));
+  Serial.println(String(anim) + " " + String(xPosPupil) + " " + String(yPosPupil));
 
 }
 
