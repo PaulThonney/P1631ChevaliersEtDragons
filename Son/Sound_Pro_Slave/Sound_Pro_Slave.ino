@@ -22,14 +22,6 @@
 // DREQ should be an Int pin, see http://arduino.cc/en/Reference/attachInterrupt
 #define DREQ 3       // VS1053 Data request, ideally an Interrupt pin
 
-String folders[] = {
-  "/other",
-  "/hurt",
-  "/attack",
-  "/die",
-  "/growl"
-};
-
 Adafruit_VS1053_FilePlayer musicPlayer = Adafruit_VS1053_FilePlayer(BREAKOUT_RESET, BREAKOUT_CS, BREAKOUT_DCS, DREQ, CARDCS);
 
 void setup() {
@@ -69,8 +61,8 @@ void receiveEvent(int howMany) {
     trackId = Wire.read();
   }
 
-  if (data < sizeof(folders) / sizeof(folders[0])) {
-    play(folders[data], trackId);
+  if (data < getDirSize("/", false)) {
+    play("/" + getDirName(data), trackId);
   }
 
   if (data == 255) {
@@ -88,14 +80,14 @@ void receiveEvent(int howMany) {
 void play(String dir, int id) {
   musicPlayer.stopPlaying();
   if (id <= -1)
-    id =  random(0, getDirSize(dir));
+    id =  random(0, getDirSize(dir, true));
   String filename = getFileName(dir, id);
   Serial.println("Playing: " + filename);
   filename = dir + "/" + filename;
   musicPlayer.startPlayingFile(filename.c_str());
 }
 
-int getDirSize(String dirName) {
+int getDirSize(String dirName, bool onlyFiles) {
   File dir = SD.open(dirName);
   int nb = 0;
   while (true) {
@@ -103,12 +95,30 @@ int getDirSize(String dirName) {
     if (! entry) {
       break;
     }
-    if (!entry.isDirectory()) {
+    if (!onlyFiles == entry.isDirectory()) {
       nb++;
     }
     entry.close();
   }
   return nb;
+}
+
+String getDirName(String dirName, int id) {
+  File dir = SD.open(dirName);
+  int nb = 0;
+  while (true) {
+    File entry =  dir.openNextFile();
+    if (! entry) {
+      break;
+    }
+    if (entry.isDirectory()) {
+      if (nb == id) {
+        return entry.name();
+      }
+      nb++;
+    }
+    entry.close();
+  }
 }
 
 String getFileName(String dirName, int id) {
@@ -127,7 +137,6 @@ String getFileName(String dirName, int id) {
     }
     entry.close();
   }
-
 }
 
 void printDirectory(File dir, int numTabs) {
