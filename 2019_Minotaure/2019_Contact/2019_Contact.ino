@@ -17,7 +17,7 @@
 
 #define INTEL 100  // adresse de l'intelligence centrale, arduino nano sur le PCB Bluetooth
 
-#define CONTACT 2 //adresse de cet arduino
+#define ADRESSE_CONTACT 2 //adresse de cet arduino
 
 
 
@@ -56,9 +56,13 @@ uint16_t cycle[MATRICE_NOMBRE] = {0, 0, 0, 0, 0, 0};
 
 bool getHit = false;
 int lastHitZone = 0;
+bool isClignote = false;
+unsigned long clignoteAt = 0;
 
-void setup()
-{
+uint32_t rouge = matrice[0].Color(255, 0, 0);
+uint32_t invisible = matrice[0].Color(0, 0, 0);
+
+void setup() {
   pinMode(CONTACT0_PIN, INPUT);
   pinMode(CONTACT1_PIN, INPUT);
   pinMode(CONTACT2_PIN, INPUT);
@@ -84,8 +88,10 @@ void requestEvent() {
   getHit = false;
 }
 
-void loop()
-{
+void loop() {
+  if (clignoteAll(rouge)) {
+    return;
+  }
   int16_t newContact[MATRICE_NOMBRE] = { digitalRead(CONTACT0_PIN), //sauvegarde l'état du bouton
                                          // digitalRead(CONTACT1_PIN), //pas utilisé sur minotaure
                                          digitalRead(CONTACT2_PIN),
@@ -98,17 +104,15 @@ void loop()
   {
     if (newContact[i] == LOW && oldContact[i] == HIGH && millis() > 1000) // Détecte si on appuie sur un bouton NC aprés 1s
     {
-      //Serial.println(i);
-
       getHit = true;
       lastHitZone = i;
-
-      uint32_t rouge = matrice[i].Color(255, 0, 0);
-      clignoteTousLed(rouge);
+      isClignote = true;
+      clignoteAt = millis();
       Serial.println("contact");
     }
     oldContact[i] = newContact[i];
   }
+
 
   if ((unsigned long)(millis() - tempsActuel[0]) >= 100) //lumière arc-en-ciel avec un temps différent pour chaque matrice pour le fun
   {
@@ -132,39 +136,31 @@ void loop()
   }
 }
 
-void allumeLed(uint8_t n, uint32_t couleur) // n est le numero de la matrice, ici 1 à 6
+void allumeLed(uint8_t n, uint32_t couleur) // n est le numero de la matrice, ici 0 à 5
 {
   for (uint8_t i = 0; i < PIXEL_NOMBRE; i++) //allume LED par LED
     matrice[n].setPixelColor(i, couleur);
   matrice[n].show();
 }
 
-void clignoteLed(uint8_t n, uint32_t couleur)
-{
-  uint32_t invisible = matrice[n].Color(0, 0, 0);
-  for (uint8_t i = 0; i < 5; i++)
-  {
-    //if (millis() % 1000 <= 500)// sans delay mais je ne veux pas que le mino perde un autre point de vie tout de suite après sinon c'est la mitraillette et le combat se fini d'un coup
-    allumeLed(n, couleur);
-    delay(TEMPS_CLIGNETEMENT); // oui, je sais, j'ai mis des delay dégueulasses mais c'est dans mon cas, c'est facile et c'est pas grave
-    //else
+bool clignoteLed(uint8_t n, uint32_t couleur) {
+  if (!isClignote)return false;
+  if (millis() > clignoteAt + 1500) {
     allumeLed(n, invisible);
-    delay(TEMPS_CLIGNETEMENT);
+    isClignote = false;
+    return false;
   }
+  bool on = (millis() % 1000 <= 500);
+  allumeLed(n, (on) ? couleur : invisible);
+  return true;
 }
 
-void clignoteTousLed(uint32_t couleur)
-{
-  uint32_t invisible = matrice[0].Color(0, 0, 0);
-  for (uint8_t i = 0; i < 4; i++)
-  {
-    for (uint8_t j = 0; j < 6; j++)
-      allumeLed(j, couleur);
-    delay(TEMPS_CLIGNETEMENT);
-    for (uint8_t j = 0; j < 6; j++)
-      allumeLed(j, invisible);
-    delay(TEMPS_CLIGNETEMENT);
+bool clignoteAll(uint32_t couleur) {
+  bool tmp = false;
+  for (uint8_t i = 0; i < MATRICE_NOMBRE; i++) {
+    tmp = clignoteLed(i, couleur);
   }
+  return tmp;
 }
 
 void arcenciel(uint8_t n) //programme pris de la bibliothèque
