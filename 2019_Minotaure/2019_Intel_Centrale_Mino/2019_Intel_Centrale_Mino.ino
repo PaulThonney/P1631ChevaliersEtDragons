@@ -12,6 +12,7 @@
 #define ADRESSE_INTELLIGENCE_CENTRALE 100 // adresse de l'intelligence centrale, arduino nano sur le PCB Bluetooth
 #define ADDR_TRAQUAGE 20 // Arduino Nano se trouvant sur le PCB ADDR_TRAQUAGE (ici c'est l'angle du servo qui est transmit)
 #define ADDR_CONTACT 2  //  PCB HMI, Nano se trouvant à gauche lorsqu'on regarde le U depuis sa base. Il gère les plaque de contact et les LED
+#define ADDR_SOUND  22
 #define ADRESSE_ROUE 19// PCB Puissance, "Arduino 2" Nano
 #define SON // PCB HMI,  Nano se trouvant à droite lorsqu'on regarde le U depuis sa base. Il gère le HP
 #define ADDR_EYES 69
@@ -66,6 +67,9 @@ int stateMenuPos = 0; // Position du curseur
 unsigned long askResponseAt;
 bool waitingResponse = false;
 
+void sendEyes(int id, int data = -1);
+void sendSound(int id, int data = -1);
+
 
 
 //AUTOMATIQUE
@@ -84,6 +88,8 @@ void setup() {
   Wire.begin(ADRESSE_INTELLIGENCE_CENTRALE);
   Serial2.begin(115200);
   Serial.begin(115200);
+  setupRobot();
+  sendSound(0, 0);// Starting sound
   Serial.println("Setup completed");
 }
 
@@ -124,6 +130,8 @@ void loop() {
 void setupRobot() {
   currentLife = MAX_LIFE;
   hurtCooldown = 0;
+  sendTracking(0x2E);
+  sendEyes(0);
 }
 
 bool hurt(byte dmg) {
@@ -133,17 +141,11 @@ bool hurt(byte dmg) {
   if (currentLife <= 0) {
     //DEAD
     currentLife = 0;
-    if (!waitingResponse) {
-      Wire.beginTransmission(ADDR_EYES);
-      Wire.write(3);
-      Wire.endTransmission();
-    }
+    sendEyes(3);
+    sendSound(1);
   } else {
-    if (!waitingResponse) {
-      Wire.beginTransmission(ADDR_EYES);
-      Wire.write(1);
-      Wire.endTransmission();
-    }
+    sendEyes(1);
+    sendSound(3);
   }
   return true;
 }
@@ -197,11 +199,7 @@ bool sendData(int addr, byte *buffer, int nbBytes) {
 */
 void loopAutomatique() {
   if (onStartState()) {//Seulement la première fois qu'il rentre dans la loop
-    if (!waitingResponse) {
-      Wire.beginTransmission(ADDR_TRAQUAGE);
-      Wire.write(0x1E);
-      Wire.endTransmission();
-    }
+    sendTracking(0x1E);
   }
 
   if (checkPause()) { // quitte directement la loop si la pause est pressée et évite que le "state" puisse être changé dans la fonction
@@ -222,17 +220,11 @@ void loopAutomatique() {
       lastUpdateHead = millis();
       Serial.println(String(nbRequest) + " Servo: " + String(headAngle) + " Distance: " + String(targetDistance) + " isTracking: " + String(isFindTarget));
     }
-
-    if (!waitingResponse) {
-      Wire.beginTransmission(ADDR_EYES);
-      Wire.write(5);
-      Wire.write((3 << 3) | map(headAngle, -90, 90, 0, 6));
-      Wire.endTransmission();
-    }
+    sendEyes(5, (3 << 3) | map(headAngle, -90, 90, 0, 6));
   }
 
   if (headAngle > -5 && headAngle < 5) {
-    if(isFindTarget){
+    if (isFindTarget) {
       int speed = map(targetDistance, 0, 255, 10, 100);
       sendMotorValue(0, speed);
       sendMotorValue(1, speed);
@@ -262,21 +254,10 @@ void loopAutomatique() {
 */
 void loopManuel() {
   if (onStartState()) {//Seulement la première fois qu'il rentre dans la loop
-
-    if (!waitingResponse) {
-      Wire.beginTransmission(ADDR_TRAQUAGE);
-      Wire.write(0x2E);
-      Wire.endTransmission();
-    }
-
+    sendTracking(0x2E);
   }
 
-  if (!waitingResponse) {
-    Wire.beginTransmission(ADDR_EYES);
-    Wire.write(5);
-    Wire.write((map(AxisLX(), 0, 255, 0, 6) << 3) | map(AxisLY(), 0, 255, 0, 6));
-    Wire.endTransmission();
-  }
+  sendEyes(5, (map(AxisLX(), 0, 255, 0, 6) << 3) | map(AxisLY(), 0, 255, 0, 6));
 
   if (checkPause()) { // quitte directement la loop si la pause est pressée et évite que le "state" puisse être changé dans la fonction
     return;
@@ -303,6 +284,36 @@ void loopManuel() {
 
   sendMotorValue(0, speed1);
   sendMotorValue(1, speed2);
+}
+
+void sendSound(int id, int data) {
+  if (!waitingResponse) {
+    Wire.beginTransmission(ADDR_SOUND);
+    Wire.write(id);
+    if (data > -1) {
+      Wire.write(data);
+    }
+    Wire.endTransmission();
+  }
+}
+
+void sendTracking(int id) {
+  if (!waitingResponse) {
+    Wire.beginTransmission(ADDR_TRAQUAGE);
+    Wire.write(id);
+    Wire.endTransmission();
+  }
+}
+
+void sendEyes(int id, int data) {
+  if (!waitingResponse) {
+    Wire.beginTransmission(ADDR_EYES);
+    Wire.write(id);
+    if (data > -1) {
+      Wire.write(data);
+    }
+    Wire.endTransmission();
+  }
 }
 
 void sendMotorValue(byte id, int value) {
