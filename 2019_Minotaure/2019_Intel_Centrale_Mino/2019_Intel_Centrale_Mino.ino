@@ -11,7 +11,7 @@
 
 #define ADRESSE_INTELLIGENCE_CENTRALE 100 // adresse de l'intelligence centrale, arduino nano sur le PCB Bluetooth
 #define ADDR_TRAQUAGE 20 // Arduino Nano se trouvant sur le PCB ADDR_TRAQUAGE (ici c'est l'angle du servo qui est transmit)
-#define CONTACT 2  //  PCB HMI, Nano se trouvant à gauche lorsqu'on regarde le U depuis sa base. Il gère les plaque de contact et les LED
+#define ADDR_CONTACT 2  //  PCB HMI, Nano se trouvant à gauche lorsqu'on regarde le U depuis sa base. Il gère les plaque de contact et les LED
 #define ADRESSE_ROUE 19// PCB Puissance, "Arduino 2" Nano
 #define SON // PCB HMI,  Nano se trouvant à droite lorsqu'on regarde le U depuis sa base. Il gère le HP
 #define ADDR_EYES 69
@@ -134,8 +134,35 @@ bool hurt(byte dmg) {
   if (currentLife <= 0) {
     //DEAD
     currentLife = 0;
+    if (!waitingResponse) {
+      Wire.beginTransmission(ADDR_EYES);
+      Wire.write(3);
+      Wire.endTransmission();
+    }
+  } else {
+    if (!waitingResponse) {
+      Wire.beginTransmission(ADDR_EYES);
+      Wire.write(1);
+      Wire.endTransmission();
+    }
   }
   return true;
+}
+
+void loopHurt() {
+  byte buffer[2];
+  if (getData(ADDR_CONTACT, buffer, 2)) {
+    if ((bool)buffer[0] == true) {
+      byte dmg = 0;
+      switch (buffer[1]) {
+        case 0: dmg = 1; break;
+        case 1: dmg = 1; break;
+        case 2: dmg = 1; break;
+        case 3: dmg = 1; break;
+      }
+      hurt(dmg);
+    }
+  }
 }
 
 int nbRequest;
@@ -181,6 +208,8 @@ void loopAutomatique() {
   if (checkPause()) { // quitte directement la loop si la pause est pressée et évite que le "state" puisse être changé dans la fonction
     return;
   }
+
+  loopHurt();
 
   if (millis() - lastUpdateHead >  20) { //demande à la pixy ces valeurs toutes les 25ms
 
@@ -235,6 +264,8 @@ void loopManuel() {
   if (checkPause()) { // quitte directement la loop si la pause est pressée et évite que le "state" puisse être changé dans la fonction
     return;
   }
+
+  loopHurt();
   output = 27;
 
   float jX = JoystickValue(AxisLX());

@@ -13,18 +13,11 @@
 
 
 // Adresses I2C, il n'y a que l'intelligence centrale, car c'est le seul micro avec lequel celui-la est sensé communiquer. Dans le code 2018, il envoyait lui-même l'info au micro du son pour qu'il fasse un son de coup,
-//mais dans un souci de centralisation (imposée par M. Locatelli),c'est l'intel centrale qui relaie toute information. 
+//mais dans un souci de centralisation (imposée par M. Locatelli),c'est l'intel centrale qui relaie toute information.
 
-#define INTEL 1  // adresse de l'intelligence centrale, arduino nano sur le PCB Bluetooth
+#define INTEL 100  // adresse de l'intelligence centrale, arduino nano sur le PCB Bluetooth
 
 #define CONTACT 2 //adresse de cet arduino
-
-
-//codes pour actions
-
-#define COUP 10
-
-#define OBJET 12
 
 
 
@@ -46,7 +39,7 @@
 #define PIXEL_NOMBRE 10 //nombre de LED sur une plaque
 #define MATRICE_NOMBRE 6 //nombre de plaques de contacts
 #define LUMINOSITE 50 //luminosité des LEDs
-#define TEMPS_CLIGNETEMENT 100 
+#define TEMPS_CLIGNETEMENT 100
 
 Adafruit_NeoPixel matrice[MATRICE_NOMBRE] = {Adafruit_NeoPixel(PIXEL_NOMBRE, MATRICE0_PIN, NEO_GRB + NEO_KHZ800),//déclaration des noms de chaque matrice sous forme de tableau
                                              Adafruit_NeoPixel(PIXEL_NOMBRE, MATRICE1_PIN, NEO_GRB + NEO_KHZ800),//possiblité d'utilisé un pointeur au lieu d'un tableau, voir programme Test_plaques_de_contact_pointeur
@@ -60,6 +53,9 @@ byte oldContact[MATRICE_NOMBRE] = {HIGH, HIGH, HIGH, HIGH, HIGH, HIGH}; //état 
 
 uint64_t tempsActuel[MATRICE_NOMBRE] = {0, 0, 0, 0, 0, 0};
 uint16_t cycle[MATRICE_NOMBRE] = {0, 0, 0, 0, 0, 0};
+
+bool getHit = false;
+int lastHitZone = 0;
 
 void setup()
 {
@@ -78,7 +74,14 @@ void setup()
   }
 
   Wire.begin(ADRESSE_CONTACT);
+  Wire.onRequest(requestEvent);
   Serial.begin(9600);
+}
+
+void requestEvent() {
+  Wire.write(getHit);
+  Wire.write(lastHitZone);
+  getHit = false;
 }
 
 void loop()
@@ -96,9 +99,9 @@ void loop()
     if (newContact[i] == LOW && oldContact[i] == HIGH && millis() > 1000) // Détecte si on appuie sur un bouton NC aprés 1s
     {
       //Serial.println(i);
-      Wire.beginTransmission(INTEL); // intilligence centrale
-      Wire.write(COUP);//informe qu'il y a contact
-      Wire.endTransmission();
+
+      getHit = true;
+      lastHitZone = i;
 
       uint32_t rouge = matrice[i].Color(255, 0, 0);
       clignoteTousLed(rouge);
@@ -141,7 +144,7 @@ void clignoteLed(uint8_t n, uint32_t couleur)
   uint32_t invisible = matrice[n].Color(0, 0, 0);
   for (uint8_t i = 0; i < 5; i++)
   {
-    //if (millis() % 1000 <= 500)// sans delay mais je ne veux pas que le mino perde un autre point de vie tout de suite après sinon c'est la mitraillette et le combat se fini d'un coup 
+    //if (millis() % 1000 <= 500)// sans delay mais je ne veux pas que le mino perde un autre point de vie tout de suite après sinon c'est la mitraillette et le combat se fini d'un coup
     allumeLed(n, couleur);
     delay(TEMPS_CLIGNETEMENT); // oui, je sais, j'ai mis des delay dégueulasses mais c'est dans mon cas, c'est facile et c'est pas grave
     //else
