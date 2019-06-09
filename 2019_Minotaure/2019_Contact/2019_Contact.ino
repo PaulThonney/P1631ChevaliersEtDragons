@@ -1,66 +1,71 @@
-// Code de l'Arduino Nano gérant les plaques de contacts
-// Dany VALADO
-// 01.07.2017
-// Ce qu'il reste à ajouter dans le code :
-//  - mode pause et mode combat
-//  - la perte de point de vie
-//  - l'animation de la mort du Minotaure
-//  - l'identification visuelle de la plaque touchée par le Chevalier
-//  - l'animation d'un mode spéciale comme un boost/ralentissement de vitesse, une paralysie/aveuglement/étourdissement dû à l'attaque spéciale du chevalier
+//Maxime Scharwath
 
 #include <Adafruit_NeoPixel.h> //LED RGB
 #include <Wire.h> //I2C
 
-
-// Adresses I2C, il n'y a que l'intelligence centrale, car c'est le seul micro avec lequel celui-la est sensé communiquer. Dans le code 2018, il envoyait lui-même l'info au micro du son pour qu'il fasse un son de coup,
-//mais dans un souci de centralisation (imposée par M. Locatelli),c'est l'intel centrale qui relaie toute information.
-
-#define INTEL 100  // adresse de l'intelligence centrale, arduino nano sur le PCB Bluetooth
+#define ADRESSE_INTILLIGENCE_CENTRALE 100
 
 #define ADRESSE_CONTACT 2 //adresse de cet arduino
 
 
+#define CONTACT0_PIN   2 //droite
+#define CONTACT1_PIN   3 //arrière gauche
+#define CONTACT2_PIN   4 //gauche 
+#define CONTACT3_PIN   5 //arrière droite
+#define CONTACT4_PIN   6 //avant gauche
+#define CONTACT5_PIN   8 //avant droite
 
-
-#define CONTACT0_PIN   2 //Pins des boutons
-#define CONTACT1_PIN   3
-#define CONTACT2_PIN   4
-#define CONTACT3_PIN   5
-#define CONTACT4_PIN   6
-#define CONTACT5_PIN   8
-
-#define MATRICE0_PIN    7 //pins des matrices de LEDs
+#define MATRICE0_PIN    7
 #define MATRICE1_PIN    9
 #define MATRICE2_PIN    10
 #define MATRICE3_PIN    11
 #define MATRICE4_PIN    12
 #define MATRICE5_PIN    13
 
-#define PIXEL_NOMBRE 10 //nombre de LED sur une plaque
-#define MATRICE_NOMBRE 6 //nombre de plaques de contacts
+#define PIXEL_NUMBER 10 //nombre de LED sur une plaque
+#define MATRIX_NUMBER 6 //nombre de plaques de contacts
+
 #define LUMINOSITE 50 //luminosité des LEDs
-#define TEMPS_CLIGNETEMENT 100
+#define BLINKING_TIME 100
 
-Adafruit_NeoPixel matrice[MATRICE_NOMBRE] = {Adafruit_NeoPixel(PIXEL_NOMBRE, MATRICE0_PIN, NEO_GRB + NEO_KHZ800),//déclaration des noms de chaque matrice sous forme de tableau
-                                             Adafruit_NeoPixel(PIXEL_NOMBRE, MATRICE1_PIN, NEO_GRB + NEO_KHZ800),//possiblité d'utilisé un pointeur au lieu d'un tableau, voir programme Test_plaques_de_contact_pointeur
-                                             Adafruit_NeoPixel(PIXEL_NOMBRE, MATRICE2_PIN, NEO_GRB + NEO_KHZ800),
-                                             Adafruit_NeoPixel(PIXEL_NOMBRE, MATRICE3_PIN, NEO_GRB + NEO_KHZ800),
-                                             Adafruit_NeoPixel(PIXEL_NOMBRE, MATRICE4_PIN, NEO_GRB + NEO_KHZ800),
-                                             Adafruit_NeoPixel(PIXEL_NOMBRE, MATRICE5_PIN, NEO_GRB + NEO_KHZ800)
-                                            };
 
-byte oldContact[MATRICE_NOMBRE] = {HIGH, HIGH, HIGH, HIGH, HIGH, HIGH}; //état du bouton de la boucle précèdente
+#define MATRIX_RIGHT 0
+#define MATRIX_LEFT 2
+#define MATRIX_BACK_RIGHT 3
+#define MATRIX_BACK_LEFT 1
+#define MATRIX_FRONT_RIGHT 5
+#define MATRIX_FRONT_LEFT 4
 
-uint64_t tempsActuel[MATRICE_NOMBRE] = {0, 0, 0, 0, 0, 0};
-uint16_t cycle[MATRICE_NOMBRE] = {0, 0, 0, 0, 0, 0};
+Adafruit_NeoPixel matrice[MATRIX_NUMBER] = {
+  Adafruit_NeoPixel(PIXEL_NUMBER, MATRICE0_PIN, NEO_GRB + NEO_KHZ800),
+  Adafruit_NeoPixel(PIXEL_NUMBER, MATRICE1_PIN, NEO_GRB + NEO_KHZ800),
+  Adafruit_NeoPixel(PIXEL_NUMBER, MATRICE2_PIN, NEO_GRB + NEO_KHZ800),
+  Adafruit_NeoPixel(PIXEL_NUMBER, MATRICE3_PIN, NEO_GRB + NEO_KHZ800),
+  Adafruit_NeoPixel(PIXEL_NUMBER, MATRICE4_PIN, NEO_GRB + NEO_KHZ800),
+  Adafruit_NeoPixel(PIXEL_NUMBER, MATRICE5_PIN, NEO_GRB + NEO_KHZ800)
+};
+
+byte oldContact[MATRIX_NUMBER] = {HIGH, HIGH, HIGH, HIGH, HIGH, HIGH};
+
+bool contactUsed[MATRIX_NUMBER] = {true, false, true, true, true, false};
+
+uint64_t currentTimes[MATRIX_NUMBER];
+uint16_t cycle[MATRIX_NUMBER];
 
 bool getHit = false;
 int lastHitZone = 0;
-bool isClignote = false;
-unsigned long clignoteAt = 0;
+bool isBlinking = false;
+unsigned long blinkAt = 0;
 
-uint32_t rouge = matrice[0].Color(255, 0, 0);
-uint32_t invisible = matrice[0].Color(0, 0, 0);
+uint32_t RED = matrice[0].Color(255, 0, 0);
+uint32_t BLUE = matrice[0].Color(0, 0, 255);
+uint32_t BLACK = matrice[0].Color(0, 0, 0);
+
+int animMode = 0;
+int perviousAnimMode = 0;
+int nextAnimMode = -1;
+unsigned long animAt = 0;
+int durationAnim = 1500;
 
 void setup() {
   pinMode(CONTACT0_PIN, INPUT);
@@ -70,14 +75,14 @@ void setup() {
   pinMode(CONTACT4_PIN, INPUT);
   pinMode(CONTACT5_PIN, INPUT);
 
-  for (uint8_t i = 0; i < MATRICE_NOMBRE; i++) //configure chaque matrice de LED
-  {
+  for (uint8_t i = 0; i < MATRIX_NUMBER; i++) {
     matrice[i].begin();
     matrice[i].show();
     matrice[i].setBrightness(LUMINOSITE);
   }
 
   Wire.begin(ADRESSE_CONTACT);
+  Wire.onReceive(receiveEvent);
   Wire.onRequest(requestEvent);
   Serial.begin(9600);
 }
@@ -88,83 +93,141 @@ void requestEvent() {
   getHit = false;
 }
 
-void loop() {
-  if (clignoteAll(rouge)) {
-    return;
+void receiveEvent(int howMany) {
+  setMode(Wire.read());
+  if (howMany >= 2) {
+    nextAnimMode = Wire.read();
+    animAt = millis();
   }
-  int16_t newContact[MATRICE_NOMBRE] = { digitalRead(CONTACT0_PIN), //sauvegarde l'état du bouton
-                                         // digitalRead(CONTACT1_PIN), //pas utilisé sur minotaure
-                                         digitalRead(CONTACT2_PIN),
-                                         digitalRead(CONTACT3_PIN),
-                                         // digitalRead(CONTACT4_PIN),
-                                         digitalRead(CONTACT5_PIN) //pas utilisé sur minotaure
-                                       };
+  if (howMany >= 3) {
+    durationAnim = Wire.read() * 250;
+  } else {
+    durationAnim = 1500;
+  }
+}
 
-  for (uint8_t i = 0; i < MATRICE_NOMBRE; i++) //vérifie si le bouton NC est appuyé pour chaque matrice
-  {
-    if (newContact[i] == LOW && oldContact[i] == HIGH && millis() > 1000) // Détecte si on appuie sur un bouton NC aprés 1s
-    {
+
+void setMode(int mode) {
+  perviousAnimMode = animMode;
+  animMode = mode;
+  nextAnimMode = -1;
+  animAt = 0;
+}
+
+void loop() {
+  checkContact();
+  switch (animMode) {
+    default:
+    case 0:
+      animTracking();
+      break;
+    case 1:
+      animRainbow();
+      break;
+    case 2:
+      animShield();
+      break;
+    case 3:
+      blinkAll(RED);
+      break;
+  }
+
+  if (nextAnimMode > -1 && millis() > animAt + durationAnim) {
+    setMode(nextAnimMode);
+  }
+}
+
+void checkContact() {
+  int16_t newContact[MATRIX_NUMBER] = {
+    digitalRead(CONTACT0_PIN),
+    digitalRead(CONTACT1_PIN),
+    digitalRead(CONTACT2_PIN),
+    digitalRead(CONTACT3_PIN),
+    digitalRead(CONTACT4_PIN),
+    digitalRead(CONTACT5_PIN)
+  };
+
+  for (uint8_t i = 0; i < MATRIX_NUMBER; i++) {
+    if (newContact[i] == LOW && oldContact[i] == HIGH && contactUsed[i] && millis() > 1000) {
       getHit = true;
       lastHitZone = i;
-      isClignote = true;
-      clignoteAt = millis();
       Serial.println("contact");
     }
     oldContact[i] = newContact[i];
   }
-
-
-  if ((unsigned long)(millis() - tempsActuel[0]) >= 100) //lumière arc-en-ciel avec un temps différent pour chaque matrice pour le fun
-  {
-    tempsActuel[0] = millis();
-    arcenciel(0);
-  }
-  if ((unsigned long)(millis() - tempsActuel[2]) >= 150)
-  {
-    tempsActuel[2] = millis();
-    arcenciel(2);
-  }
-  if ((unsigned long)(millis() - tempsActuel[3]) >= 200)
-  {
-    tempsActuel[3] = millis();
-    arcenciel(3);
-  }
-  if ((unsigned long)(millis() - tempsActuel[5]) >= 250)
-  {
-    tempsActuel[5] = millis();
-    arcenciel(5);
-  }
 }
 
-void allumeLed(uint8_t n, uint32_t couleur) // n est le numero de la matrice, ici 0 à 5
-{
-  for (uint8_t i = 0; i < PIXEL_NOMBRE; i++) //allume LED par LED
-    matrice[n].setPixelColor(i, couleur);
-  matrice[n].show();
-}
 
-bool clignoteLed(uint8_t n, uint32_t couleur) {
-  if (!isClignote)return false;
-  if (millis() > clignoteAt + 1500) {
-    allumeLed(n, invisible);
-    isClignote = false;
+
+bool animBlink(uint32_t color, int duration, int callbackAnim) {
+  if (!isBlinking) {
+    isBlinking = true;
+    blinkAt = millis();
+  }
+  if (millis() > blinkAt + duration) {
+    isBlinking = false;
+    animMode = callbackAnim;
     return false;
   }
-  bool on = (millis() % 1000 <= 500);
-  allumeLed(n, (on) ? couleur : invisible);
+  blinkAll(color);
   return true;
 }
 
-bool clignoteAll(uint32_t couleur) {
-  bool tmp = false;
-  for (uint8_t i = 0; i < MATRICE_NOMBRE; i++) {
-    tmp = clignoteLed(i, couleur);
-  }
-  return tmp;
+void animTracking() {
+  showLed(MATRIX_FRONT_LEFT, BLUE);
+  showLed(MATRIX_FRONT_RIGHT, RED);
+  showLed(MATRIX_BACK_LEFT, BLUE);
+  showLed(MATRIX_BACK_RIGHT, RED);
 }
 
-void arcenciel(uint8_t n) //programme pris de la bibliothèque
-{
+void animRainbow() {
+  if ((unsigned long)(millis() - currentTimes[0]) >= 100) {
+    currentTimes[0] = millis();
+    rainbow(0);
+  }
+  if ((unsigned long)(millis() - currentTimes[2]) >= 150) {
+    currentTimes[2] = millis();
+    rainbow(2);
+  }
+  if ((unsigned long)(millis() - currentTimes[3]) >= 200) {
+    currentTimes[3] = millis();
+    rainbow(3);
+  }
+  if ((unsigned long)(millis() - currentTimes[5]) >= 250) {
+    currentTimes[5] = millis();
+    rainbow(5);
+  }
+}
+
+void animShield() {
+  int v = (sin(millis() / 500.0) + 1) / 2.0 * 155 + 100;
+  uint32_t c = matrice[0].Color(0, 0, v);
+  for (uint8_t i = 0; i < MATRIX_NUMBER; i++) {
+    showLed(i, BLUE);
+  }
+}
+
+
+// n est le numero de la matrice, ici 0 à 5
+void showLed(uint8_t n, uint32_t color) {
+  for (uint8_t i = 0; i < PIXEL_NUMBER; i++) {
+    matrice[n].setPixelColor(i, color);
+  }
+  matrice[n].show();
+}
+
+void blinkLed(uint8_t n, uint32_t color) {
+  bool on = (millis() % (BLINKING_TIME * 2) <= BLINKING_TIME);
+  showLed(n, (on) ? color : BLACK);
+}
+
+void blinkAll(uint32_t color) {
+  for (uint8_t i = 0; i < MATRIX_NUMBER; i++) {
+    blinkLed(i, color);
+  }
+}
+
+void rainbow(uint8_t n) {
   for (uint16_t i = 0; i < matrice[n].numPixels(); i++)
     matrice[n].setPixelColor(i, roue(n, (i + cycle[n]) & 255));
   matrice[n].show();
@@ -174,8 +237,7 @@ void arcenciel(uint8_t n) //programme pris de la bibliothèque
 }
 
 
-uint32_t roue(uint8_t n, byte rouePos)//programme pris de la bibliothèque
-{
+uint32_t roue(uint8_t n, byte rouePos) {
   rouePos = 255 - rouePos;
   if (rouePos < 85) {
     return matrice[n].Color(255 - rouePos * 3, 0, rouePos * 3);

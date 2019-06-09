@@ -9,17 +9,17 @@
 #include <Wire.h> //I2C
 //toutes les adresses I2C
 
-#define ADRESSE_INTELLIGENCE_CENTRALE 100 // adresse de l'intelligence centrale, arduino nano sur le PCB Bluetooth
-#define ADDR_TRAQUAGE 20 // Arduino Nano se trouvant sur le PCB ADDR_TRAQUAGE (ici c'est l'angle du servo qui est transmit)
+#define ADDR_INTELLIGENCE_CENTRALE 100 // adresse de l'intelligence centrale, arduino nano sur le PCB Bluetooth
+#define ADDR_TRACKING 20 // Arduino Nano se trouvant sur le PCB ADDR_TRACKING (ici c'est l'angle du servo qui est transmit)
 #define ADDR_CONTACT 2  //  PCB HMI, Nano se trouvant à gauche lorsqu'on regarde le U depuis sa base. Il gère les plaque de contact et les LED
 #define ADDR_SOUND  22
-#define ADRESSE_ROUE 19// PCB Puissance, "Arduino 2" Nano
-#define SON // PCB HMI,  Nano se trouvant à droite lorsqu'on regarde le U depuis sa base. Il gère le HP
+#define ADDR_WHEEL 19// PCB Puissance, "Arduino 2" Nano
 #define ADDR_EYES 69
 //DEFINE ROBOT
 
 #define MAX_LIFE 6
 #define HURT_COOLDOWN 5000 // en ms
+#define CONTACT_MODE 0 //Valueur par defaut => 0: Tracking, 1: Rainbow, 2:AnimShield, 3: BlinkAll(RED)
 
 //BUTTONS
 #define BUFFER_SIZE 8
@@ -69,6 +69,7 @@ bool waitingResponse = false;
 
 void sendEyes(int id, int data = -1);
 void sendSound(int id, int data = -1);
+void sendContact(int id, int data = -1, int duration = -1);
 
 
 
@@ -85,7 +86,7 @@ int currentMotorValue[2];
 //END ROBOT
 
 void setup() {
-  Wire.begin(ADRESSE_INTELLIGENCE_CENTRALE);
+  Wire.begin(ADDR_INTELLIGENCE_CENTRALE);
   Serial2.begin(115200);
   Serial.begin(115200);
   setupRobot();
@@ -132,12 +133,14 @@ void setupRobot() {
   hurtCooldown = 0;
   sendTracking(0x2E);
   sendEyes(0);
+  sendContact(CONTACT_MODE);
 }
 
 bool hurt(byte dmg) {
   if (millis() < hurtCooldown)return false; //Cooldown
   hurtCooldown = millis() + HURT_COOLDOWN;
   currentLife -= dmg;
+  sendContact(3, CONTACT_MODE, 6); // blink pendant 1500ms (6*250ms)
   if (currentLife <= 0) {
     //DEAD
     currentLife = 0;
@@ -211,7 +214,7 @@ void loopAutomatique() {
   if (millis() - lastUpdateHead >  25) { //demande à la pixy ces valeurs toutes les 25ms
 
     byte buffer[3];
-    if (getData(ADDR_TRAQUAGE, buffer, 3)) {
+    if (getData(ADDR_TRACKING, buffer, 3)) {
       headAngle = map(buffer[0], 0, 180, -90, 90);
       targetDistance = buffer[3];
       isFindTarget = buffer[2];
@@ -297,9 +300,23 @@ void sendSound(int id, int data) {
   }
 }
 
+void sendContact(int id, int data, int duration) {
+  if (!waitingResponse) {
+    Wire.beginTransmission(ADDR_CONTACT);
+    Wire.write(id);
+    if (data > -1) {
+      Wire.write(data);
+    }
+    if (duration > -1) {
+      Wire.write(duration);
+    }
+    Wire.endTransmission();
+  }
+}
+
 void sendTracking(int id) {
   if (!waitingResponse) {
-    Wire.beginTransmission(ADDR_TRAQUAGE);
+    Wire.beginTransmission(ADDR_TRACKING);
     Wire.write(id);
     Wire.endTransmission();
   }
@@ -324,7 +341,7 @@ void sendMotorValue(byte id, int value) {
     bitSet(data, 7);
   }
   if (!waitingResponse) {
-    Wire.beginTransmission(ADRESSE_ROUE);
+    Wire.beginTransmission(ADDR_WHEEL);
     Wire.write(id);
     Wire.write(data);
     Wire.endTransmission();
