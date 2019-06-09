@@ -15,6 +15,16 @@
 #define ADDR_SOUND  22
 #define ADDR_WHEEL 19// PCB Puissance, "Arduino 2" Nano
 #define ADDR_EYES 69
+
+
+#define IS_MINOTAURE true
+
+
+byte modules[5] =  {ADDR_TRACKING, ADDR_CONTACT, ADDR_SOUND, ADDR_WHEEL, ADDR_EYES};
+bool stateModules[5];
+unsigned long lastPingAt = 0;
+
+
 //DEFINE ROBOT
 
 #define MAX_LIFE 6
@@ -67,9 +77,9 @@ int stateMenuPos = 0; // Position du curseur
 unsigned long askResponseAt;
 bool waitingResponse = false;
 
-void sendEyes(int id, int data = -1);
-void sendSound(int id, int data = -1);
-void sendContact(int id, int data = -1, int duration = -1);
+bool sendEyes(int id, int data = -1);
+bool sendSound(int id, int data = -1);
+bool sendContact(int id, int data = -1, int duration = -1);
 
 
 
@@ -96,6 +106,7 @@ void setup() {
 
 void loop() {
   communicationManette(); // On commence par communiquer les dernières infos avec la manette
+  pingModules();
   //Serial.println(waitingResponse);
   if (millis() > askResponseAt + 25) {
     askResponseAt = 0;
@@ -136,6 +147,15 @@ void setupRobot() {
   sendContact(CONTACT_MODE);
 }
 
+void loopAmbiant() {
+  if (IS_MINOTAURE) {
+    if (random(500) == 0) {
+      sendSound(4);//GROWL
+      sendEyes(6);//ANGRY
+    }
+  }
+}
+
 bool hurt(byte dmg) {
   if (millis() < hurtCooldown)return false; //Cooldown
   hurtCooldown = millis() + HURT_COOLDOWN;
@@ -169,7 +189,28 @@ void loopHurt() {
   }
 }
 
+void pingModules() {
+  if (millis() < lastPingAt + 500) {
+    return;
+  }
+  lastPingAt = millis();
+  for (int i = 0; i < sizeof(modules) / sizeof(modules[0]); i++) {
+    bool state = pingAddr(modules[i]);
+    if (state != stateModules[i]) {
+      Serial.println("Module " + String(i) + " " + String((state ? "CONNECTED" : "DISCONNECTED")));
+      sendSound(0, state ? 1 : 2);
+    }
+    stateModules[i] = state;
+  }
+}
+
 int nbRequest;
+
+bool pingAddr(int addr) {
+  if (waitingResponse)return false;
+  Wire.beginTransmission(addr);
+  return Wire.endTransmission() == 0;
+}
 
 bool getData(int addr, byte *buffer, int nbBytes) {
   if (waitingResponse)return false;
@@ -192,8 +233,7 @@ bool sendData(int addr, byte *buffer, int nbBytes) {
   for (int i = 0; i < nbBytes; i++) {
     Wire.write(buffer[i]);
   }
-  Wire.endTransmission();
-  return true;
+  return Wire.endTransmission() == 1;
 }
 
 /*
@@ -289,63 +329,61 @@ void loopManuel() {
   sendMotorValue(1, speed2);
 }
 
-void sendSound(int id, int data) {
-  if (!waitingResponse) {
-    Wire.beginTransmission(ADDR_SOUND);
-    Wire.write(id);
-    if (data > -1) {
-      Wire.write(data);
-    }
-    Wire.endTransmission();
+bool sendSound(int id, int data) {
+  if (waitingResponse)return false;
+  Wire.beginTransmission(ADDR_SOUND);
+  Wire.write(id);
+  if (data > -1) {
+    Wire.write(data);
   }
+  return Wire.endTransmission() == 1;
+
 }
 
-void sendContact(int id, int data, int duration) {
-  if (!waitingResponse) {
-    Wire.beginTransmission(ADDR_CONTACT);
-    Wire.write(id);
-    if (data > -1) {
-      Wire.write(data);
-    }
-    if (duration > -1) {
-      Wire.write(duration);
-    }
-    Wire.endTransmission();
+bool sendContact(int id, int data, int duration) {
+  if (waitingResponse)return false;
+  Wire.beginTransmission(ADDR_CONTACT);
+  Wire.write(id);
+  if (data > -1) {
+    Wire.write(data);
   }
+  if (duration > -1) {
+    Wire.write(duration);
+  }
+  return Wire.endTransmission() == 1;
+
 }
 
-void sendTracking(int id) {
-  if (!waitingResponse) {
-    Wire.beginTransmission(ADDR_TRACKING);
-    Wire.write(id);
-    Wire.endTransmission();
-  }
+bool sendTracking(int id) {
+  if (waitingResponse)return false;
+  Wire.beginTransmission(ADDR_TRACKING);
+  Wire.write(id);
+  return Wire.endTransmission() == 1;
+
 }
 
-void sendEyes(int id, int data) {
-  if (!waitingResponse) {
-    Wire.beginTransmission(ADDR_EYES);
-    Wire.write(id);
-    if (data > -1) {
-      Wire.write(data);
-    }
-    Wire.endTransmission();
+bool sendEyes(int id, int data) {
+  if (waitingResponse)return false;
+  Wire.beginTransmission(ADDR_EYES);
+  Wire.write(id);
+  if (data > -1) {
+    Wire.write(data);
   }
+  return Wire.endTransmission() == 1;
 }
 
-void sendMotorValue(byte id, int value) {
-  if (currentMotorValue[id] == value)return; //évite de faire une comm si rien n'a changé
+bool sendMotorValue(byte id, int value) {
+  if (waitingResponse)return false;
+  if (currentMotorValue[id] == value)return true; //évite de faire une comm si rien n'a changé
   currentMotorValue[id] = value;
   byte data = abs(value);
   if ((value < 0)) {
     bitSet(data, 7);
   }
-  if (!waitingResponse) {
-    Wire.beginTransmission(ADDR_WHEEL);
-    Wire.write(id);
-    Wire.write(data);
-    Wire.endTransmission();
-  }
+  Wire.beginTransmission(ADDR_WHEEL);
+  Wire.write(id);
+  Wire.write(data);
+  return Wire.endTransmission() == 1;
 }
 
 float JoystickValue(byte v) {
