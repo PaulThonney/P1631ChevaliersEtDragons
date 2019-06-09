@@ -132,6 +132,9 @@ void loop() {
     case 3:
       blinkAll(RED);
       break;
+    case 4:
+      showAll(BLACK);
+      break;
   }
 
   if (nextAnimMode > -1 && millis() > animAt + durationAnim) {
@@ -216,6 +219,12 @@ void showLed(uint8_t n, uint32_t color) {
     matrice[n].setPixelColor(i, color);
   }
   matrice[n].show();
+}
+
+void showAll(uint32_t color) {
+  for (uint8_t i = 0; i < MATRIX_NUMBER; i++) {
+    showLed(i, color);
+  }
 }
 
 void blinkLed(uint8_t n, uint32_t color) {

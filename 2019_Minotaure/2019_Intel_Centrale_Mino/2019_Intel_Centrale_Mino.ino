@@ -16,46 +16,51 @@
 #define ADDR_WHEEL 0x13// PCB Puissance, "Arduino 2" Nano
 #define ADDR_EYES 0x14
 
-
 #define IS_MINOTAURE true
 
+//DEFINE ROBOT
+
+#define MAX_LIFE 6
+#define CONTACT_DEFAULT_MODE 0 //Valueur par defaut => 0: Tracking, 1: Rainbow, 2:AnimShield, 3: BlinkAll(RED)
+
+//BUTTONS
+#define BUFFER_SIZE 8
+#define JOYSTICK_MARGIN 0.02f
+
+//MANETTE STATES
+#define CONNECTED 1
+
+#define EASY 0
+#define MEDIUM 1
+#define HARD 2
+
+#define MAX_SPEED 0
+#define COOLDOWN 1
+
+bool ButtonA(bool flanc = false);
+bool ButtonB(bool flanc = false);
+bool ButtonX(bool flanc = false);
+bool ButtonY(bool flanc = false);
+bool ButtonWEST(bool flanc = false);
+bool ButtonEAST(bool flanc = false);
+bool ButtonNORTH(bool flanc = false);
+bool ButtonSOUTH(bool flanc = false);
+bool ButtonLB(bool flanc = false);
+bool ButtonRB(bool flanc = false);
+bool ButtonLS(bool flanc = false);
+bool ButtonRS(bool flanc = false);
+bool ButtonSTART(bool flanc = false);
+bool ButtonSELECT(bool flanc = false);
+bool flancsMontants[14];
 
 byte modules[5] =  {ADDR_TRACKING, ADDR_CONTACT, ADDR_SOUND, ADDR_WHEEL, ADDR_EYES};
 bool stateModules[5];
 unsigned long lastPingAt = 0;
 
-
-//DEFINE ROBOT
-
-#define MAX_LIFE 6
-#define HURT_COOLDOWN 5000 // en ms
-#define CONTACT_MODE 0 //Valueur par defaut => 0: Tracking, 1: Rainbow, 2:AnimShield, 3: BlinkAll(RED)
-
-//BUTTONS
-#define BUFFER_SIZE 8
-#define A 7 //addr 0
-#define B 4 //addr 0
-#define X 6 //addr 0
-#define Y 5 //addr 0
-#define WEST 4 //addr 1
-#define EAST 6 //addr 1
-#define NORTH 5 //addr 1
-#define SOUTH 7 //addr 1
-#define LB 2 //addr 0
-#define RB 3 //addr 0
-#define LS 4 //addr 1
-#define RS 3 //addr 1
-#define START 1 //addr 0
-#define SELECT 0 //addr 0
-#define JOYSTICK_MARGIN 0.02f
-
 byte dataBuffer[BUFFER_SIZE];
-byte output = 0;
-//Il stoque la valeure actuelle du flanc montant pour les boutons dont la correspondance est telle:
-//0: null; 1: A; 2: B, 3: NORTH, 4: SOUTH
-bool flancsMontants[] = {false, false, false, false, false};
-byte anglePixy;
-byte sonEtVibreur; //4 premiers bits: buzzer; 4 derniers bits: vibreur
+byte controllerOutput = 0;
+byte controllerBuzzer = 0; //0-15
+byte controllerVibrator = 0; //0-15
 
 typedef enum State { // On définit les états possible de la machine
   Automatique,
@@ -63,6 +68,8 @@ typedef enum State { // On définit les états possible de la machine
   PauseGenerale,
   MenuSelection,
   MenuGO,
+  Disconnected,
+  Difficulty,
 } State;
 
 State setState(State state, int menuPos = -1);
@@ -76,12 +83,23 @@ int stateMenuPos = 0; // Position du curseur
 
 unsigned long askResponseAt;
 bool waitingResponse = false;
+int nbRequest;
 
 bool sendEyes(int id, int data = -1);
 bool sendSound(int id, int data = -1);
 bool sendContact(int id, int data = -1, int duration = -1);
 
+// maxSpeed[%] - hurtCooldown[ms]
+int difficulty[][2] = {
+  {40, 5000},//easy
+  {75, 2500},//medium
+  {100, 1000}//hard
+};
+int currentDifficulty = 0;
 
+int getDifficulty(int id) {
+  return difficulty[currentDifficulty][id];
+}
 
 //AUTOMATIQUE
 long lastUpdateHead = 0;
@@ -105,14 +123,13 @@ void setup() {
 }
 
 void loop() {
-  communicationManette(); // On commence par communiquer les dernières infos avec la manette
+  communicationController(); // On commence par communiquer les dernières infos avec la manette
   pingModules();
   //Serial.println(waitingResponse);
   if (millis() > askResponseAt + 25) {
     askResponseAt = 0;
     waitingResponse = false;
   }
-  //return;
   switch (currentState) {
     case State::Automatique: { // Mode automatique du robot
         loopAutomatique();
@@ -126,14 +143,20 @@ void loop() {
         loopPauseGenerale();
         break;
       }
-
     case State::MenuSelection: { // Mode menu principal
         loopMenuSelection();
         break;
       }
-
     case State::MenuGO: { // Mode MenuGo
         loopMenuGo();
+        break;
+      }
+    case State::Disconnected: { // Mode Disconnected
+        loopDisconnected();
+        break;
+      }
+    case State::Difficulty: { // Mode Difficulty
+        loopDifficulty();
         break;
       }
   }
@@ -144,22 +167,20 @@ void setupRobot() {
   hurtCooldown = 0;
   sendTracking(0x2E);
   sendEyes(0);
-  sendContact(CONTACT_MODE);
+  sendContact(CONTACT_DEFAULT_MODE);
   sendSound(250);//StopSound
 }
 
-void loopAmbiant() {
-  if (IS_MINOTAURE) {
-    if (random(500) == 0) {
-      sendSound(4);//GROWL
-      sendEyes(6);//ANGRY
-    }
-  }
+void resumeGame() {
+  sendEyes(0);
+  sendContact(CONTACT_DEFAULT_MODE);
+  sendSound(250);//StopSound
 }
 
 bool hurt(byte dmg) {
   if (millis() < hurtCooldown)return false; //Cooldown
-  hurtCooldown = millis() + HURT_COOLDOWN;
+  int cooldownDuration = getDifficulty(COOLDOWN);
+  hurtCooldown = millis() + cooldownDuration;
   currentLife -= dmg;
   if (currentLife <= 0) {//DEAD
     currentLife = 0;
@@ -167,7 +188,7 @@ bool hurt(byte dmg) {
   } else {
     sendEyes(1);
     sendSound(1);//HURT
-    sendContact(3, CONTACT_MODE, 6); // blink pendant 1500ms (6*250ms)
+    sendContact(3, CONTACT_DEFAULT_MODE, (cooldownDuration / 250)); // blink pendant (x*250ms)
   }
   return true;
 }
@@ -209,8 +230,6 @@ void pingModules() {
   }
 }
 
-int nbRequest;
-
 bool pingAddr(int addr) {
   if (waitingResponse)return false;
   Wire.beginTransmission(addr);
@@ -239,6 +258,31 @@ bool sendData(int addr, byte *buffer, int nbBytes) {
     Wire.write(buffer[i]);
   }
   return Wire.endTransmission() == 1;
+}
+
+void loopAmbiant() {
+  if (IS_MINOTAURE) {
+    if (random(500) == 0) {
+      sendSound(4);//GROWL
+      sendEyes(6);//ANGRY
+    }
+  }
+}
+
+void loopDisconnected() {
+  if (onStartState()) {
+    sendEyes(7);
+    sendMotorValue(0, 0);
+    sendMotorValue(1, 0);
+    sendSound(0, 4);
+    sendContact(4);
+  }
+  if (InfoController() == CONNECTED) {
+    setState(State::MenuGO);
+    sendEyes(8);
+    sendSound(0, 5);
+    sendContact(CONTACT_DEFAULT_MODE);
+  }
 }
 
 /*
@@ -273,13 +317,13 @@ void loopAutomatique() {
 
   if (headAngle > -5 && headAngle < 5) {
     if (isFindTarget) {
-      int speed = map(targetDistance, 0, 255, 10, 100);
+      int speed = map(targetDistance, 0, 255, 10, getDifficulty(MAX_SPEED));
       sendMotorValue(0, speed);
       sendMotorValue(1, speed);
     }
 
   } else {
-    int speed = map(abs(headAngle), 0, 90, 10, 100);
+    int speed = map(abs(headAngle), 0, 90, 10, getDifficulty(MAX_SPEED));
     if (headAngle < 0) {
       sendMotorValue(0, speed);
       sendMotorValue(1, -speed);
@@ -288,12 +332,7 @@ void loopAutomatique() {
       sendMotorValue(1, -speed);
     }
   }
-
-
-
-
-
-  output = 26;
+  controllerOutput = 26;
 }
 
 /*
@@ -312,16 +351,15 @@ void loopManuel() {
   }
 
   loopHurt();
-  output = 27;
+  controllerOutput = 27;
 
   float jX = JoystickValue(AxisLX());
   float jY = JoystickValue(AxisLY());
 
-
   float hyp = sqrt(jX * jX + jY * jY);
 
-  int speed1 = 100 * hyp;
-  int speed2 = 100 * hyp;
+  int speed1 = getDifficulty(MAX_SPEED) * hyp;
+  int speed2 = getDifficulty(MAX_SPEED) * hyp;
 
   if (jX < 0) {
     speed1 *= (1 - abs(jX));
@@ -391,215 +429,22 @@ bool sendMotorValue(byte id, int value) {
   return Wire.endTransmission() == 1;
 }
 
-float JoystickValue(byte v) {
-  float tmp = mapfloat(v, 0, 255, -1, 1);
-  if (tmp >= -JOYSTICK_MARGIN && tmp <= JOYSTICK_MARGIN)tmp = 0;
-  return tmp;
-}
-
 /*
-   @func byte InfoManette retourne la valeure de l'etat de la mannette
-   @param null
-   @return byte
-*/
-byte InfoManette()       {
-  return dataBuffer[8];
-}
-
-/*
-   @func byte AxisLX retourne la valeure de l'axe X du joystick gauche
-   @param null
-   @return byte
-*/
-byte AxisLX()       {
-  return dataBuffer[4];
-}
-/*
-   @func byte AxisLY retourne la valeure de l'axe Y du joystick gauche
-   @param null
-   @return byte
-*/
-byte AxisLY()       {
-  return dataBuffer[5];
-}
-/*
-   @func byte AxisRX retourne la valeure de l'axe X du joystick droite
-   @param null
-   @return byte
-*/
-byte AxisRX()       {
-  return dataBuffer[6];
-}
-/*
-   @func byte AxisRY retourne la valeure de l'axe Y du joystick droite
-   @param null
-   @return byte
-*/
-byte AxisRY()       {
-  return dataBuffer[7];
-}
-/*
-   @func byte AxisLT retourne la valeure de la gachette droite
-   @param null
-   @return byte
-*/
-byte AxisLT()       {
-  return dataBuffer[2];
-}
-/*
-   @func byte AxisRT retourne la valeure de la gachette Gauche
-   @param null
-   @return byte
-*/
-byte AxisRT()       {
-  return dataBuffer[3];
-}
-/*
-   @func bool ButtonA retourne la valeure du boutton A
-   @param null
-   @return bool
-*/
-bool ButtonA()      {
-  return bitRead(dataBuffer[0], A);
-}
-/*
-   @func bool ButtonB retourne la valeure du boutton B
-   @param null
-   @return bool
-*/
-bool ButtonB()      {
-  return bitRead(dataBuffer[0], B);
-}
-/*
-   @func bool ButtonX retourne la valeure du boutton X
-   @param null
-   @return bool
-*/
-bool ButtonX()      {
-  return bitRead(dataBuffer[0], X);
-}
-/*
-   @func bool ButtonY retourne la valeure du boutton Y
-   @param null
-   @return bool
-*/
-bool ButtonY()      {
-  return bitRead(dataBuffer[0], Y);
-}
-/*
-   @func bool ButtonWEST retourne la valeure du boutton WEST
-   @param null
-   @return bool
-*/
-bool ButtonWEST()   {
-  return bitRead(dataBuffer[1], WEST);
-}
-/*
-   @func bool ButtonEAST retourne la valeure du boutton EAST
-   @param null
-   @return bool
-*/
-bool ButtonEAST()   {
-  return bitRead(dataBuffer[1], EAST);
-}
-/*
-   @func bool ButtonNORTH retourne la valeure du boutton NORTH
-   @param null
-   @return bool
-*/
-bool ButtonNORTH()  {
-
-  return bitRead(dataBuffer[1], NORTH);
-}
-/*
-   @func bool ButtonSOUTH retourne la valeure du boutton SOUTH
-   @param null
-   @return bool
-*/
-bool ButtonSOUTH()  {
-  return bitRead(dataBuffer[1], SOUTH);
-}
-/*
-   @func bool ButtonLB retourne la valeure du boutton LB
-   @param null
-   @return bool
-*/
-bool ButtonLB()     {
-  return bitRead(dataBuffer[0], LB);
-}
-/*
-   @func bool ButtonRB retourne la valeure du boutton RB
-   @param null
-   @return bool
-*/
-bool ButtonRB()     {
-  return bitRead(dataBuffer[0], RB);
-}
-/*
-   @func bool ButtonLS retourne la valeure du boutton LS
-   @param null
-   @return bool
-*/
-bool ButtonLS()     {
-  return bitRead(dataBuffer[0], LS);
-}
-/*
-   @func bool ButtonRS retourne la valeure du boutton RS
-   @param null
-   @return bool
-*/
-bool ButtonRS()     {
-  return bitRead(dataBuffer[0], RS);
-}
-/*
-   @func bool ButtonSTART retourne la valeure du boutton START
-   @param null
-   @return bool
-*/
-bool ButtonSTART()  {
-  return bitRead(dataBuffer[0], START);
-}
-/*
-   @func bool ButtonSELECT retourne la valeure du boutton SELECT
-   @param null
-   @return bool
-*/
-bool ButtonSELECT() {
-  return bitRead(dataBuffer[0], SELECT);
-}
-/*
-   @func bool ButtonFlanc Permet de détecter les flancs montants des boutons dans une seule fonction
-   @param bool button
-   #param byte flancId 0: null; 1: A; 2: B, 3: NORTH, 4: SOUTH
-   @return bool
-*/
-bool ButtonFlanc(bool button, byte flancId) {
-  bool temp = false;
-  if (button && !flancsMontants[flancId]) {
-    //Serial.println("BUTTON PRESSED: " + String(flancId));
-    temp = true;
-  }
-  flancsMontants[flancId] = button;
-  return temp;
-}
-
-float mapfloat(float x, float in_min, float in_max, float out_min, float out_max) {
-  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
-}
-
-/*
-   @func void communicationManette Gère la communication avec l'esp32 du groupe manette installé sur le pcb.
+   @func void communicationController Gère la communication avec l'esp32 du groupe manette installé sur le pcb.
    On commence par réenvoyer les données que l'on possède ce qui fait que l'esp32 nous envoieles siennes directement.
    @param null
    @return void
 */
-void communicationManette() {
-  uint8_t dataBufferWrite[2] = {output, sonEtVibreur};// réenvoie les données à la manette
+void communicationController() {
+  uint8_t dataBufferWrite[2] = {controllerOutput, (controllerBuzzer << 4 | controllerVibrator)}; // réenvoie les données à la manette
   Serial2.write(dataBufferWrite, 2);
-  while (Serial2.available() < BUFFER_SIZE) { // controlle la longueure de la tramme
-    //Serial.print("#");
-  }
+  // controlle la longueure de la tramme
+  while (Serial2.available() < BUFFER_SIZE) {}
   Serial2.readBytes(dataBuffer, BUFFER_SIZE); //lit les infos en provenance de la manette
+
+  if (InfoController() != CONNECTED) {
+    setState(State::Disconnected);
+  }
 }
 /*
    @func State setState  Elle change l'état actuelle de la variable state et retourne son état actuel.
@@ -633,7 +478,7 @@ bool onStartState() {
    @return bool
 */
 bool checkPause() {
-  if (ButtonFlanc(ButtonB(), 2)) {
+  if (ButtonB(true)) {
     sendMotorValue(0, 0);
     sendMotorValue(1, 0);
     setState(State::PauseGenerale, 0);
@@ -649,8 +494,8 @@ bool checkPause() {
 void  loopMenuGo() {
   if (onStartState()) {
   }
-  output = 3;
-  if (ButtonFlanc(ButtonA(), 1)) {
+  controllerOutput = 3;
+  if (ButtonA(true)) {
     setState(savedMode);
   }
 }
@@ -661,14 +506,14 @@ void  loopMenuGo() {
 */
 byte changeCursorPosition(byte sizeMenu) {
   sizeMenu--; // permet de donner taille menu en comptant à partir de 1
-  if (ButtonFlanc(ButtonNORTH(), 3)) {
+  if (ButtonNORTH(true)) {
     stateMenuPos++;
     if (stateMenuPos > sizeMenu) {
       stateMenuPos = 0;
     }
   }
 
-  if (ButtonFlanc(ButtonSOUTH(), 4)) {
+  if (ButtonSOUTH(true)) {
     stateMenuPos--;
     if (stateMenuPos < 0) {
       stateMenuPos = sizeMenu;
@@ -692,17 +537,17 @@ void loopPauseGenerale() {
 
   switch (pos) {
     case 0:
-      output = 28; // Info d'affichage pour la manette
-
-      if (ButtonFlanc(ButtonA(), 1)) {
+      controllerOutput = 28; // Info d'affichage pour la manette
+      if (ButtonA(true)) {
+        resumeGame();
         setState(State::MenuGO);
       }
       break;
     case 1:
-      output = 29; // Info d'affichage pour la manette
-
-      if (ButtonFlanc(ButtonA(), 1)) {
-        setState(State::MenuSelection, 0);
+      controllerOutput = 29; // Info d'affichage pour la manette
+      if (ButtonA(true)) {
+        resumeGame();
+        setState(State::MenuSelection);
       }
       break;
   }
@@ -722,17 +567,281 @@ void  loopMenuSelection() {
   switch (pos) {
     default:
     case 0:
-      output = 1;
+      controllerOutput = 1;
       selectedMode = State::Automatique;
       break;
     case 1:
-      output = 2;
+      controllerOutput = 2;
       selectedMode = State::Manuel;
       break;
   }
 
-  if (ButtonFlanc(ButtonA(), 1)) {
+  if (ButtonA(true)) {
     savedMode = selectedMode; // Lors du choix d'un mode on le stock pour que le menu pause puisse reprendre sur le bon mode
     setState(State::MenuGO);
   }
+}
+
+void loopDifficulty() {
+  if (onStartState()) {
+  }
+  byte tailleMenu = 3;
+  byte pos = changeCursorPosition(tailleMenu);//changement position curseur
+  int diffTemp = -1;
+
+  switch (pos) {
+    default:
+    case 0:
+      controllerOutput = 1;
+      diffTemp = EASY;
+      break;
+    case 1:
+      controllerOutput = 2;
+      diffTemp = MEDIUM;
+      break;
+    case 3:
+      controllerOutput = 2;
+      diffTemp = HARD;
+      break;
+  }
+
+  if (ButtonA(true)) {
+    if (diffTemp > -1)
+      currentDifficulty = diffTemp;
+    setState(State::MenuSelection);
+  }
+  if (ButtonB(true)) {//RETOUR
+    setState(State::MenuSelection);
+  }
+}
+
+
+//CONTROLLER
+
+
+float JoystickValue(byte v) {
+  float tmp = mapfloat(v, 0, 255, -1, 1);
+  if (tmp >= -JOYSTICK_MARGIN && tmp <= JOYSTICK_MARGIN)tmp = 0;
+  return tmp;
+}
+
+float TriggerValue(byte v) {
+  float tmp = mapfloat(v, 0, 255, 0, 1);
+  return tmp;
+}
+
+/*
+   @func byte InfoController retourne la valeure de l'etat de la mannette
+   @param null
+   @return byte
+*/
+byte InfoController() {
+  return dataBuffer[8];
+}
+
+/*
+   @func byte AxisLX retourne la valeure de l'axe X du joystick gauche
+   @param null
+   @return byte
+*/
+byte AxisLX() {
+  return dataBuffer[4];
+}
+/*
+   @func byte AxisLY retourne la valeure de l'axe Y du joystick gauche
+   @param null
+   @return byte
+*/
+byte AxisLY() {
+  return dataBuffer[5];
+}
+/*
+   @func byte AxisRX retourne la valeure de l'axe X du joystick droite
+   @param null
+   @return byte
+*/
+byte AxisRX() {
+  return dataBuffer[6];
+}
+/*
+   @func byte AxisRY retourne la valeure de l'axe Y du joystick droite
+   @param null
+   @return byte
+*/
+byte AxisRY() {
+  return dataBuffer[7];
+}
+/*
+   @func byte AxisLT retourne la valeure de la gachette droite
+   @param null
+   @return byte
+*/
+byte AxisLT() {
+  return dataBuffer[2];
+}
+/*
+   @func byte AxisRT retourne la valeure de la gachette Gauche
+   @param null
+   @return byte
+*/
+byte AxisRT() {
+  return dataBuffer[3];
+}
+/*
+   @func bool ButtonA retourne la valeure du boutton A
+   @param null
+   @return bool
+*/
+bool ButtonA(bool flanc) {
+  bool v = bitRead(dataBuffer[0], 7);
+  if (flanc)v = ButtonFlanc(v, 0);
+  return v;
+}
+/*
+   @func bool ButtonB retourne la valeure du boutton B
+   @param null
+   @return bool
+*/
+bool ButtonB(bool flanc) {
+  bool v = bitRead(dataBuffer[0], 4);
+  if (flanc)v = ButtonFlanc(v, 1);
+  return v;
+}
+/*
+   @func bool ButtonX retourne la valeure du boutton X
+   @param null
+   @return bool
+*/
+bool ButtonX(bool flanc) {
+  bool v = bitRead(dataBuffer[0], 6);
+  if (flanc)v = ButtonFlanc(v, 2);
+  return v;
+}
+/*
+   @func bool ButtonY retourne la valeure du boutton Y
+   @param null
+   @return bool
+*/
+bool ButtonY(bool flanc) {
+  bool v = bitRead(dataBuffer[0], 5);
+  if (flanc)v = ButtonFlanc(v, 3);
+  return v;
+}
+/*
+   @func bool ButtonWEST retourne la valeure du boutton WEST
+   @param null
+   @return bool
+*/
+bool ButtonWEST(bool flanc) {
+  bool v = bitRead(dataBuffer[1], 4);
+  if (flanc)v = ButtonFlanc(v, 4);
+  return v;
+}
+/*
+   @func bool ButtonEAST retourne la valeure du boutton EAST
+   @param null
+   @return bool
+*/
+bool ButtonEAST(bool flanc) {
+  bool v = bitRead(dataBuffer[1], 6);
+  if (flanc)v = ButtonFlanc(v, 5);
+  return v;
+}
+/*
+   @func bool ButtonNORTH retourne la valeure du boutton NORTH
+   @param null
+   @return bool
+*/
+bool ButtonNORTH(bool flanc) {
+  bool v = bitRead(dataBuffer[1], 5);
+  if (flanc)v = ButtonFlanc(v, 6);
+  return v;
+}
+/*
+   @func bool ButtonSOUTH retourne la valeure du boutton SOUTH
+   @param null
+   @return bool
+*/
+bool ButtonSOUTH(bool flanc) {
+  bool v = bitRead(dataBuffer[1], 7);
+  if (flanc)v = ButtonFlanc(v, 7);
+  return v;
+}
+/*
+   @func bool ButtonLB retourne la valeure du boutton LB
+   @param null
+   @return bool
+*/
+bool ButtonLB(bool flanc) {
+  bool v = bitRead(dataBuffer[0], 2);
+  if (flanc)v = ButtonFlanc(v, 8);
+  return v;
+}
+/*
+   @func bool ButtonRB retourne la valeure du boutton RB
+   @param null
+   @return bool
+*/
+bool ButtonRB(bool flanc) {
+  bool v = bitRead(dataBuffer[0], 3);
+  if (flanc)v = ButtonFlanc(v, 9);
+  return v;
+}
+/*
+   @func bool ButtonLS retourne la valeure du boutton LS
+   @param null
+   @return bool
+*/
+bool ButtonLS(bool flanc) {
+  bool v = bitRead(dataBuffer[0], 4);
+  if (flanc)v = ButtonFlanc(v, 10);
+  return v;
+}
+/*
+   @func bool ButtonRS retourne la valeure du boutton RS
+   @param null
+   @return bool
+*/
+bool ButtonRS(bool flanc) {
+  bool v = bitRead(dataBuffer[0], 3);
+  if (flanc)v = ButtonFlanc(v, 11);
+  return v;
+}
+/*
+   @func bool ButtonSTART retourne la valeure du boutton START
+   @param null
+   @return bool
+*/
+bool ButtonSTART(bool flanc) {
+  bool v = bitRead(dataBuffer[0], 1);
+  if (flanc)v = ButtonFlanc(v, 12);
+  return v;
+}
+/*
+   @func bool ButtonSELECT retourne la valeure du boutton SELECT
+   @param null
+   @return bool
+*/
+bool ButtonSELECT(bool flanc) {
+  bool v = bitRead(dataBuffer[0], 0);
+  if (flanc)v = ButtonFlanc(v, 13);
+  return v;
+}
+/*
+   @func bool ButtonFlanc Permet de détecter les flancs montants des boutons dans une seule fonction
+   @param bool button
+   #param byte flancId 0: null; 1: A; 2: B, 3: NORTH, 4: SOUTH
+   @return bool
+*/
+bool ButtonFlanc(bool button, byte flancId) {
+  bool temp = false;
+  if (button && !flancsMontants[flancId]) {
+    temp = true;
+  }
+  flancsMontants[flancId] = button;
+  return temp;
+}
+
+float mapfloat(float x, float in_min, float in_max, float out_min, float out_max) {
+  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
