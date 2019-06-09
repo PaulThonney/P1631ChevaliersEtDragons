@@ -398,6 +398,15 @@ float JoystickValue(byte v) {
 }
 
 /*
+   @func byte InfoManette retourne la valeure de l'etat de la mannette
+   @param null
+   @return byte
+*/
+byte InfoManette()       {
+  return dataBuffer[8];
+}
+
+/*
    @func byte AxisLX retourne la valeure de l'axe X du joystick gauche
    @param null
    @return byte
@@ -587,7 +596,7 @@ float mapfloat(float x, float in_min, float in_max, float out_min, float out_max
 void communicationManette() {
   uint8_t dataBufferWrite[2] = {output, sonEtVibreur};// réenvoie les données à la manette
   Serial2.write(dataBufferWrite, 2);
-  while (Serial2.available() < 8) { // controlle la longueure de la tramme
+  while (Serial2.available() < BUFFER_SIZE) { // controlle la longueure de la tramme
     //Serial.print("#");
   }
   Serial2.readBytes(dataBuffer, BUFFER_SIZE); //lit les infos en provenance de la manette
