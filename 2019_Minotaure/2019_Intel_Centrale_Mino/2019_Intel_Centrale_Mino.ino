@@ -9,12 +9,12 @@
 #include <Wire.h> //I2C
 //toutes les adresses I2C
 
-#define ADDR_INTELLIGENCE_CENTRALE 100 // adresse de l'intelligence centrale, arduino nano sur le PCB Bluetooth
-#define ADDR_TRACKING 20 // Arduino Nano se trouvant sur le PCB ADDR_TRACKING (ici c'est l'angle du servo qui est transmit)
-#define ADDR_CONTACT 2  //  PCB HMI, Nano se trouvant à gauche lorsqu'on regarde le U depuis sa base. Il gère les plaque de contact et les LED
-#define ADDR_SOUND  22
-#define ADDR_WHEEL 19// PCB Puissance, "Arduino 2" Nano
-#define ADDR_EYES 69
+#define ADDR_INTELLIGENCE_CENTRALE 0x0 // adresse de l'intelligence centrale, arduino nano sur le PCB Bluetooth
+#define ADDR_TRACKING 0x10 // Arduino Nano se trouvant sur le PCB ADDR_TRACKING (ici c'est l'angle du servo qui est transmit)
+#define ADDR_CONTACT 0x11  //  PCB HMI, Nano se trouvant à gauche lorsqu'on regarde le U depuis sa base. Il gère les plaque de contact et les LED
+#define ADDR_SOUND  0x12
+#define ADDR_WHEEL 0x13// PCB Puissance, "Arduino 2" Nano
+#define ADDR_EYES 0x14
 
 
 #define IS_MINOTAURE true
@@ -145,6 +145,7 @@ void setupRobot() {
   sendTracking(0x2E);
   sendEyes(0);
   sendContact(CONTACT_MODE);
+  sendSound(250);//StopSound
 }
 
 void loopAmbiant() {
@@ -160,17 +161,21 @@ bool hurt(byte dmg) {
   if (millis() < hurtCooldown)return false; //Cooldown
   hurtCooldown = millis() + HURT_COOLDOWN;
   currentLife -= dmg;
-  sendContact(3, CONTACT_MODE, 6); // blink pendant 1500ms (6*250ms)
-  if (currentLife <= 0) {
-    //DEAD
+  if (currentLife <= 0) {//DEAD
     currentLife = 0;
-    sendEyes(3);
-    sendSound(1);
+    die();
   } else {
     sendEyes(1);
-    sendSound(3);
+    sendSound(1);//HURT
+    sendContact(3, CONTACT_MODE, 6); // blink pendant 1500ms (6*250ms)
   }
   return true;
+}
+
+void die() {
+  sendEyes(3);//eyeDead
+  sendSound(3);//soundDead
+  sendContact(4);//animDead
 }
 
 void loopHurt() {
@@ -633,6 +638,8 @@ bool checkPause() {
    @return void
 */
 void  loopMenuGo() {
+  if (onStartState()) {
+  }
   output = 3;
   if (ButtonFlanc(ButtonA(), 1)) {
     setState(savedMode);
@@ -666,6 +673,11 @@ byte changeCursorPosition(byte sizeMenu) {
    @return void
 */
 void loopPauseGenerale() {
+  if (onStartState()) {//Seulement la première fois qu'il rentre dans la loop
+    sendSound(0, 3);//Musique Pause
+    sendEyes(4);// Yeux Pause
+  }
+
   byte tailleMenu = 2; // compte à partir de 1 donc ici le menu fait 2
   byte pos = changeCursorPosition(tailleMenu);//changement position curseur
 
@@ -692,6 +704,8 @@ void loopPauseGenerale() {
    @return void
 */
 void  loopMenuSelection() {
+  if (onStartState()) {
+  }
   byte tailleMenu = 2;
   byte pos = changeCursorPosition(tailleMenu);//changement position curseur
   State selectedMode = State::Automatique;

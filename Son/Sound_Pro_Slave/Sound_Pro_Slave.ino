@@ -4,9 +4,9 @@
 #include <SD.h>
 #include <Wire.h>
 
+#define ADDR_SOUND  0x12
 // define the pins used
 //#define CLK 13       // SPI Clock, shared with SD card
-#define ADDR_SOUND  22
 
 // These are the pins used for the breakout example
 #define BREAKOUT_RESET  9      // VS1053 reset pin (output)
@@ -55,6 +55,10 @@ void loop() {
 }
 
 void receiveEvent(int howMany) {
+  if (howMany == 0) {
+    Serial.println("PING");
+    return;
+  }
   int data = Wire.read();    // receive byte as an integer
   int trackId = -1;
   if (howMany > 1) {
@@ -63,6 +67,10 @@ void receiveEvent(int howMany) {
 
   if (data < getDirSize("/", false)) {
     play("/" + getDirName(data), trackId);
+  }
+
+  if (data == 250) {
+    musicPlayer.stopPlaying();
   }
 
   if (data == 255) {
@@ -78,6 +86,7 @@ void receiveEvent(int howMany) {
 }
 
 void play(String dir, int id) {
+  musicPlayer.pausePlaying(false);
   musicPlayer.stopPlaying();
   if (id <= -1)
     id =  random(0, getDirSize(dir, true));

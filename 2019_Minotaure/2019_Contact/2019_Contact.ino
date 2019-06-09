@@ -3,9 +3,7 @@
 #include <Adafruit_NeoPixel.h> //LED RGB
 #include <Wire.h> //I2C
 
-#define ADRESSE_INTILLIGENCE_CENTRALE 100
-
-#define ADRESSE_CONTACT 2 //adresse de cet arduino
+#define ADDR_CONTACT 0x11 //adresse de cet arduino
 
 
 #define CONTACT0_PIN   2 //droite
@@ -81,7 +79,7 @@ void setup() {
     matrice[i].setBrightness(LUMINOSITE);
   }
 
-  Wire.begin(ADRESSE_CONTACT);
+  Wire.begin(ADDR_CONTACT);
   Wire.onReceive(receiveEvent);
   Wire.onRequest(requestEvent);
   Serial.begin(9600);
@@ -94,6 +92,10 @@ void requestEvent() {
 }
 
 void receiveEvent(int howMany) {
+  if (howMany == 0) {
+    Serial.println("PING");
+    return;
+  }
   setMode(Wire.read());
   if (howMany >= 2) {
     nextAnimMode = Wire.read();

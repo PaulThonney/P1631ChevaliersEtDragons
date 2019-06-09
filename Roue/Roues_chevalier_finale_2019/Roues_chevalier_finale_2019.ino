@@ -1,6 +1,8 @@
 #include <SoftPWM.h>
 #include <Wire.h>
 
+#define ADDR_WHEEL 0x13
+
 #define PWM_OUTPUT_MOTOR_L 4 // Pin 5 où sort le pwm du moteur 2
 #define INPUT_4_MOTOR_L    3  // Pin 9 pour un sens
 #define INPUT_3_MOTOR_L    9  // Pin 3 pour l'autre sens
@@ -33,7 +35,7 @@ void setup() {
   SoftPWMBegin();
   Serial.begin(9600);
 
-  Wire.begin(19);
+  Wire.begin(ADDR_WHEEL);
   Wire.onReceive(receiveEvent);
 
   //Moteur droite
@@ -207,6 +209,10 @@ int regulationPID(byte objective, byte measuredValue) {
 
 ////////////////////PARTIE I2C////////////////////
 void receiveEvent(int howMany) {
+  if (howMany == 0) {
+    Serial.println("PING");
+    return;
+  }
   if (howMany != 2) {
     Serial.println("ERREUR RECEPTION: " + String(howMany) + " bytes received");
     return;

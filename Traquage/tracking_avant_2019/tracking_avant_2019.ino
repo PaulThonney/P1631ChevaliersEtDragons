@@ -12,8 +12,7 @@ Pixy pixy; //donne un nom à la pixy
 Servo servo; // donne un nom de Servomoteur
 
 //adresse I2C
-#define ADRESSE_INTELLIGENCE_CENTRALE 100
-#define ADRESSE_TRACKAGE 20
+#define ADDR_TRACKING 0x10
 #define PIN_SERVO 5
 #define TEMPS_CONTINUE_RECHERCHE 2000
 #define VITESSE_ROTATION_RECHERCHE 250
@@ -39,7 +38,7 @@ float posObject(int pos) {
 void setup() {
   Serial.begin(9600);
 
-  Wire.begin(ADRESSE_TRACKAGE);
+  Wire.begin(ADDR_TRACKING);
   Wire.onReceive(receiveEvent);
   Wire.onRequest(requestEvent);
 
@@ -53,7 +52,6 @@ void setup() {
 
 void loop() {
   tracking();
-  communication();
 }
 
 unsigned int count = 0;
@@ -61,7 +59,7 @@ unsigned int count = 0;
 
 void requestEvent() {
   nbRequest++;
-  Serial.println("REQUEST "+String(nbRequest));
+  Serial.println("REQUEST " + String(nbRequest));
   Serial.println(byte(servo.read()));
   Serial.println(byte(distance));
   Serial.println(byte(isTracking));
@@ -69,16 +67,6 @@ void requestEvent() {
   Wire.write((servo.read()));
   Wire.write((distance));
   Wire.write((isTracking));
-}
-
-void communication() {
-  return;
-  if (!wantedMessage)return;
-  wantedMessage = false;
-  Serial.println("SEND DATA");
-  Wire.beginTransmission(ADRESSE_INTELLIGENCE_CENTRALE);
-  Wire.write(ADRESSE_TRACKAGE);
-  Wire.endTransmission();
 }
 
 void tracking() {
@@ -143,6 +131,10 @@ void tracking() {
 }
 
 void receiveEvent(int howMany) {
+  if (howMany == 0) {
+    Serial.println("PING");
+    return;
+  }
   int message = (uint8_t)Wire.read();
   Serial.println("Command: " + String(message));
   switch (message) {

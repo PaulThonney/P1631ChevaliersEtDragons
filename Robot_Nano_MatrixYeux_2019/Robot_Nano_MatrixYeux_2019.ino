@@ -2,6 +2,8 @@
 #include "SoftwareI2C.h"
 #include "Adafruit_LEDBackpack_Soft.h"
 
+#define ADDR_EYES 0x14
+
 #define matrix0 0
 #define matrix1 1
 
@@ -48,7 +50,7 @@ bool isPlaying = false;
 
 void setup() {
 
-  Wire.begin(69); //Begin with adress 8
+  Wire.begin(ADDR_EYES);
   Wire.onReceive(receiveEvent); // register event
   Serial.begin(9600);
 
@@ -631,6 +633,13 @@ void hitAnim() {
   posy = 3;
 }
 
+void angryAnim() {
+  closeAnim(1000);
+  angry();
+  posx = 3;
+  posy = 3;
+}
+
 
 void deathAnim() {
   refresh(matrix0);
@@ -722,8 +731,9 @@ void loop() {
     case 3: deathAnim(); break;
     case 4: textAnim("PAUSE", LED_RED); break;
     case 5: controlledEyeAnim(); break;
-    case 6: textAnim("LOST CONNECTION", LED_RED); break;
-    case 7: textAnim("CONNECTED", LED_GREEN, 1000); break;
+    case 6: angryAnim(); break;
+    case 7: textAnim("LOST CONNECTION", LED_RED); break;
+    case 8: textAnim("CONNECTED", LED_GREEN, 1000); break;
   }
 }
 
@@ -733,6 +743,10 @@ void setEyePos(int x, int y) {
 }
 
 void receiveEvent(int howMany) {
+  if (howMany == 0) {
+    Serial.println("PING");
+    return;
+  }
   byte anim = Wire.read();
   setAnim(anim);
   if (howMany >= 2) {
