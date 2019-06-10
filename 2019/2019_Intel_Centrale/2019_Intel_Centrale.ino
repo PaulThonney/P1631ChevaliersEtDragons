@@ -123,6 +123,7 @@ void setup() {
 }
 
 void loop() {
+  long timeStartAt = millis();
   communicationController(); // On commence par communiquer les dernières infos avec la manette
   pingModules();
   //Serial.println(waitingResponse);
@@ -160,6 +161,7 @@ void loop() {
         break;
       }
   }
+  Serial.println("Loop time:" + String(millis() - timeStartAt) + "ms");
 }
 
 void setupRobot() {
@@ -436,7 +438,7 @@ bool sendMotorValue(byte id, int value) {
    @return void
 */
 void communicationController() {
-  uint8_t dataBufferWrite[2] = {controllerOutput, (controllerBuzzer << 4 | controllerVibrator)}; // réenvoie les données à la manette
+  uint8_t dataBufferWrite[2] = {controllerOutput, (byte)(controllerBuzzer << 4 | controllerVibrator)}; // réenvoie les données à la manette
   Serial2.write(dataBufferWrite, 2);
   // controlle la longueure de la tramme
   while (Serial2.available() < BUFFER_SIZE) {}
