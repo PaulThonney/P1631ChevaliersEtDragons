@@ -1,18 +1,24 @@
 #include <SoftPWM.h>
 #include <Wire.h>
-#include <PID_v1.h>
+#include <PID_v1.h>// PID by Brett Beauregard
 
 #define ADDR_WHEEL 0x13
 
 #define USE_PID true
 
+#define NB_MOTORS 2
+#define HOLE_NUMBER 30
+#define WHEEL_RADIUS 10 // radius [mm]
+
 #define PWM_OUTPUT_MOTOR_L 4 // Pin 5 où sort le pwm du moteur 2
 #define INPUT_4_MOTOR_L    3  // Pin 9 pour un sens
 #define INPUT_3_MOTOR_L    9  // Pin 3 pour l'autre sens
+#define CAPTOR_MOTOR_L    2
 
 #define PWM_OUTPUT_MOTOR_R 7 // Pin 6 où sort le pwm du moteur 1
 #define INPUT_2_MOTOR_R    10  // Pin 10 pour un sens
 #define INPUT_1_MOTOR_R    11  // Pin 11 pour l'autre sens
+#define CAPTOR_MOTOR_R    2
 
 #define PIN_TEMP_R  A2
 #define PIN_TEMP_L  A3
@@ -20,58 +26,31 @@
 #define PIN_VENT_L  8
 #define PIN_LED_URGENCE 2
 #define EMERGENCY_TEMP 29
-#define PWM_MIN 10
-#define PWM_MAX 100
 
-#define NB_MOTORS 2
+#define KP 2
+#define KI 5
+#define KD 1
 
-bool tempOverheating[] = {0, 0};
+bool tempOverheating[2];
 
 int pinMotors[NB_MOTORS][4] = {
-  {INPUT_1_MOTOR_R, INPUT_2_MOTOR_R, PWM_OUTPUT_MOTOR_R, 0},
-  {INPUT_3_MOTOR_L, INPUT_4_MOTOR_L, PWM_OUTPUT_MOTOR_L, 0}
+  {INPUT_1_MOTOR_R, INPUT_2_MOTOR_R, PWM_OUTPUT_MOTOR_R, CAPTOR_MOTOR_R},
+  {INPUT_3_MOTOR_L, INPUT_4_MOTOR_L, PWM_OUTPUT_MOTOR_L, CAPTOR_MOTOR_L}
 }; //ph1, ph2, pwm, captor
 
-double stateMotors[NB_MOTORS][4] = {
-  {0, 0, 0, 0},
-  {0, 0, 0, 0}
-}; //Input,Output,Setpoint,Value
-
-double Kp = 2, Ki = 5, Kd = 1;
+double stateMotors[NB_MOTORS][4]; //Input,Output,Setpoint,Value
 
 PID pid[NB_MOTORS] = {
-  PID(&stateMotors[0][0], &stateMotors[0][1], &stateMotors[0][2], Kp, Ki, Kd, DIRECT),
-  PID(&stateMotors[1][0], &stateMotors[1][1], &stateMotors[1][2], Kp, Ki, Kd, DIRECT)
+  PID(&stateMotors[0][0], &stateMotors[0][1], &stateMotors[0][2], KP, KI, KD, DIRECT),
+  PID(&stateMotors[1][0], &stateMotors[1][1], &stateMotors[1][2], KP, KI, KD, DIRECT)
 };
 
-
-int holeNumber = 30;
 bool previousSensorValue[NB_MOTORS];
 unsigned int RPM[NB_MOTORS][3];//countHole, RPM, maxRPM
 long prevtime = 0;
 
-void checkRPM(int dur) {
-  for (int i = 0; i < NB_MOTORS; i++) {
-    bool sensorValue = digitalRead(pinMotors[i][3]);
-    if (sensorValue && !previousSensorValue[i]) {
-      RPM[i][0]++;
-    }
-    previousSensorValue[i] = sensorValue;
-  }
-
-  long currtime = millis();
-  if (currtime >= prevtime + dur) {
-    long elapsedTime = currtime - prevtime;
-    for (int i = 0; i < NB_MOTORS; i++) {
-      RPM[i][1] = ( ( 60000 / elapsedTime ) * RPM[i][0]) / holeNumber; //60000ms = 1min
-      if (RPM[i][1] > RPM[i][2]) {
-        RPM[i][2] = RPM[i][1];//MAX RPM
-      }
-      RPM[i][0] = 0;
-      Serial.println("RPM (" + String(i) + ") : " + String(RPM[i][1]));
-    }
-    prevtime = currtime;
-  }
+float getSpeed(int id) {
+  return (WHEEL_RADIUS / 1000.0) * (2 * PI) * (RPM[id][1] / 60.0); // speed [m/s]
 }
 
 void setup() {
@@ -109,8 +88,32 @@ void setup() {
   }
 }
 
-void checkTemp() {
+void checkRPM(int dur) {
+  for (int i = 0; i < NB_MOTORS; i++) {
+    bool sensorValue = digitalRead(pinMotors[i][3]);
+    if (sensorValue && !previousSensorValue[i]) {
+      RPM[i][0]++;
+    }
+    previousSensorValue[i] = sensorValue;
+  }
 
+  long currtime = millis();
+  if (currtime >= prevtime + dur) {
+    long elapsedTime = currtime - prevtime;
+    for (int i = 0; i < NB_MOTORS; i++) {
+      RPM[i][1] = ( ( 60000 / elapsedTime ) * RPM[i][0]) / HOLE_NUMBER; //60000ms = 1min
+      if (RPM[i][1] > RPM[i][2]) {
+        RPM[i][2] = RPM[i][1];//MAX RPM
+      }
+      RPM[i][0] = 0;
+      Serial.println("RPM (" + String(i) + ") : " + String(RPM[i][1]) + ", " + String(getSpeed(i)) + " m/s");
+    }
+    prevtime = currtime;
+  }
+}
+
+
+void checkTemp() {
   int tempR = getTemp(PIN_TEMP_R);
   if (tempR > EMERGENCY_TEMP) {
     tempOverheating[0] = true;
@@ -156,10 +159,6 @@ bool setMotorValue(byte id, int value) {
   return true;
 }
 
-int getMotorValue(byte id) {
-  return stateMotors[id][3];
-}
-
 void Motor(byte id) {
   double value = stateMotors[id][3];
   int pinPontH1 = pinMotors[id][0];
@@ -187,8 +186,10 @@ void Motor(byte id) {
     analogWrite(pinPWM, 0);
     return;
   }
+
   digitalWrite(pinPontH1, (value < 0) ? LOW : HIGH);
   digitalWrite(pinPontH2, (value < 0) ? HIGH : LOW);
+
   if (USE_PID) {
     SoftPWMSetPercent(pinPWM, stateMotors[id][1]);//OUTPUT
   } else {
@@ -221,6 +222,7 @@ void receiveEvent(int howMany) {
     Serial.println("PING");
     return;
   }
+
   if (howMany != 2) {
     Serial.println("ERREUR RECEPTION: " + String(howMany) + " bytes received");
     return;
