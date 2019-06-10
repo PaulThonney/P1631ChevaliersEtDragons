@@ -10,13 +10,15 @@
 //toutes les adresses I2C
 
 #define ADDR_INTELLIGENCE_CENTRALE 0x0 // adresse de l'intelligence centrale, arduino nano sur le PCB Bluetooth
-#define ADDR_TRACKING 0x10 // Arduino Nano se trouvant sur le PCB ADDR_TRACKING (ici c'est l'angle du servo qui est transmit)
-#define ADDR_CONTACT 0x11  //  PCB HMI, Nano se trouvant à gauche lorsqu'on regarde le U depuis sa base. Il gère les plaque de contact et les LED
-#define ADDR_SOUND  0x12
-#define ADDR_WHEEL 0x13// PCB Puissance, "Arduino 2" Nano
-#define ADDR_EYES 0x14
+#define ADDR_TRACKING 0x10 //16 Arduino Nano se trouvant sur le PCB ADDR_TRACKING (ici c'est l'angle du servo qui est transmit)
+#define ADDR_CONTACT 0x11 //17  PCB HMI, Nano se trouvant à gauche lorsqu'on regarde le U depuis sa base. Il gère les plaque de contact et les LED
+#define ADDR_SOUND  0x12 //18
+#define ADDR_WHEEL 0x13 //19 PCB Puissance, "Arduino 2" Nano
+#define ADDR_EYES 0x14 //20
 
 #define IS_MINOTAURE true
+
+#define LOGS_DELAY 1000
 
 //DEFINE ROBOT
 
@@ -84,6 +86,8 @@ int stateMenuPos = 0; // Position du curseur
 unsigned long askResponseAt;
 bool waitingResponse = false;
 int nbRequest;
+int nbTransmission;
+long loopTime;
 
 bool sendEyes(int id, int data = -1);
 bool sendSound(int id, int data = -1);
@@ -112,6 +116,7 @@ byte currentLife = MAX_LIFE;
 int hurtCooldown = 0;
 int currentMotorValue[2];
 //END ROBOT
+unsigned long lastLogAt;
 
 void setup() {
   Wire.begin(ADDR_INTELLIGENCE_CENTRALE);
@@ -126,7 +131,6 @@ void loop() {
   long timeStartAt = millis();
   communicationController(); // On commence par communiquer les dernières infos avec la manette
   pingModules();
-  //Serial.println(waitingResponse);
   if (millis() > askResponseAt + 25) {
     askResponseAt = 0;
     waitingResponse = false;
@@ -161,7 +165,8 @@ void loop() {
         break;
       }
   }
-  Serial.println("Loop time:" + String(millis() - timeStartAt) + "ms");
+  logs();
+  loopTime = millis() - timeStartAt;
 }
 
 void setupRobot() {
@@ -234,6 +239,7 @@ void pingModules() {
 
 bool pingAddr(int addr) {
   if (waitingResponse)return false;
+  nbTransmission++;
   Wire.beginTransmission(addr);
   return Wire.endTransmission() == 0;
 }
@@ -255,6 +261,7 @@ bool getData(int addr, byte *buffer, int nbBytes) {
 
 bool sendData(int addr, byte *buffer, int nbBytes) {
   if (waitingResponse)return false;
+  nbTransmission++;
   Wire.beginTransmission(addr);
   for (int i = 0; i < nbBytes; i++) {
     Wire.write(buffer[i]);
@@ -312,7 +319,6 @@ void loopAutomatique() {
 
       waitingResponse = false;
       lastUpdateHead = millis();
-      Serial.println(String(nbRequest) + " Servo: " + String(headAngle) + " Distance: " + String(targetDistance) + " isTracking: " + String(isFindTarget));
     }
     sendEyes(5, (3 << 3) | map(headAngle, -90, 90, 0, 6));
   }
@@ -376,6 +382,7 @@ void loopManuel() {
 
 bool sendSound(int id, int data) {
   if (waitingResponse)return false;
+  nbTransmission++;
   Wire.beginTransmission(ADDR_SOUND);
   Wire.write(id);
   if (data > -1) {
@@ -387,6 +394,7 @@ bool sendSound(int id, int data) {
 
 bool sendContact(int id, int data, int duration) {
   if (waitingResponse)return false;
+  nbTransmission++;
   Wire.beginTransmission(ADDR_CONTACT);
   Wire.write(id);
   if (data > -1) {
@@ -401,6 +409,7 @@ bool sendContact(int id, int data, int duration) {
 
 bool sendTracking(int id) {
   if (waitingResponse)return false;
+  nbTransmission++;
   Wire.beginTransmission(ADDR_TRACKING);
   Wire.write(id);
   return Wire.endTransmission() == 1;
@@ -409,6 +418,7 @@ bool sendTracking(int id) {
 
 bool sendEyes(int id, int data) {
   if (waitingResponse)return false;
+  nbTransmission++;
   Wire.beginTransmission(ADDR_EYES);
   Wire.write(id);
   if (data > -1) {
@@ -425,6 +435,7 @@ bool sendMotorValue(byte id, int value) {
   if ((value < 0)) {
     bitSet(data, 7);
   }
+  nbTransmission++;
   Wire.beginTransmission(ADDR_WHEEL);
   Wire.write(id);
   Wire.write(data);
@@ -615,6 +626,34 @@ void loopDifficulty() {
   if (ButtonB(true)) {//RETOUR
     setState(State::MenuSelection);
   }
+}
+
+//LOGS
+
+void logs() {
+  if (millis() < lastLogAt + LOGS_DELAY) {
+    return;
+  }
+  lastLogAt = millis();
+  Serial.println("======LOGS======");
+  Serial.println("Execute Time: " + String(millis() / 1000.0) + "s");
+  Serial.println("nbTransmission: " + String(nbTransmission));
+  Serial.println("nbRequest: " + String(nbRequest));
+  Serial.println("loopTime: " + String(loopTime) + "ms");
+  Serial.println("currentState: " + String(currentState));
+  Serial.println("headAngle: " + String(headAngle));
+  Serial.println("targetDistance: " + String(targetDistance));
+  Serial.println("isFindTarget: " + String(isFindTarget));
+  Serial.println("currentDifficulty: " + String(currentDifficulty));
+  Serial.println("currentMotorValue 1: " + String(currentMotorValue[0]) + "%");
+  Serial.println("currentMotorValue 2: " + String(currentMotorValue[1]) + "%"); 
+  Serial.println("Module Tracking (" + toHex(modules[0]) + "): " + String((stateModules[0] ? "CONNECTED" : "DISCONNECTED")));
+  Serial.println("Module Contact (" + toHex(modules[1]) + "): " + String((stateModules[1] ? "CONNECTED" : "DISCONNECTED")));
+  Serial.println("Module Sound (" + toHex(modules[2]) + "): " + String((stateModules[2] ? "CONNECTED" : "DISCONNECTED")));
+  Serial.println("Module Wheel (" + toHex(modules[3]) + "): " + String((stateModules[3] ? "CONNECTED" : "DISCONNECTED")));
+  Serial.println("Module Eyes (" + toHex(modules[4]) + "): " + String((stateModules[4] ? "CONNECTED" : "DISCONNECTED")));
+  Serial.println("================");
+  Serial.println();
 }
 
 
@@ -847,3 +886,10 @@ bool ButtonFlanc(bool button, byte flancId) {
 float mapfloat(float x, float in_min, float in_max, float out_min, float out_max) {
   return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
+
+String toHex(int num) {
+  char buffer[10];
+  sprintf(buffer, "%x", num);
+  return "0x" + String(buffer);
+}
+
