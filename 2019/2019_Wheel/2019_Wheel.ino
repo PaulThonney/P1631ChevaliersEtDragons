@@ -1,10 +1,12 @@
-#include <SoftPWM.h>
+times#include <SoftPWM.h>
 #include <Wire.h>
 #include <PID_v1.h>// PID by Brett Beauregard
 
 #define ADDR_WHEEL 0x13
 
 #define USE_PID false
+
+#define WATCHTIMES_TIMEOUT 2500
 
 #define NB_MOTORS 2
 #define HOLE_NUMBER 20
@@ -52,6 +54,10 @@ long prevtime = 0;
 float getSpeed(int id) {
   return (WHEEL_RADIUS / 1000.0) * (2 * PI) * (RPM[id][1] / 60.0); // speed [m/s]
 }
+
+void(* resetFunc) (void) = 0; //RESET
+
+unsigned long watchTimes;
 
 void setup() {
   SoftPWMBegin();
@@ -204,6 +210,11 @@ void loopMotors() {
 }
 
 void loop() {
+  if (millis() > watchTimes + WATCHTIMES_TIMEOUT) {
+    Serial.println("TIME OUT");
+    setMotorValue(0, 0);
+    setMotorValue(1, 0);
+  }
   checkTemp();
   loopMotors();
 }
@@ -219,6 +230,7 @@ int getTemp(byte pin) {
 ////////////////////PARTIE I2C////////////////////
 void receiveEvent(int howMany) {
   if (howMany == 0) {
+    watchTimes = millis();
     Serial.println("PING");
     return;
   }
