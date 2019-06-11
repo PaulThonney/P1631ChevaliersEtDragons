@@ -123,7 +123,7 @@ void setup() {
   Serial2.begin(115200);
   Serial.begin(115200);
   setupRobot();
-  sendSound(0, 4);// Starting sound
+  sendSound(0, 3);// Starting sound
   Serial.println("Setup completed");
 }
 

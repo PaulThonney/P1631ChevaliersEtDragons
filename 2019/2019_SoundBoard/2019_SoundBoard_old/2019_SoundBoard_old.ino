@@ -6,7 +6,7 @@
 
 // define the pins used
 //#define CLK 13       // SPI Clock, shared with SD card
-#define ADDR_SOUND  22
+#define ADDR_SOUND  0x12
 
 // These are the pins used for the breakout example
 #define BREAKOUT_RESET  9      // VS1053 reset pin (output)
@@ -26,55 +26,40 @@ Adafruit_VS1053_FilePlayer musicPlayer = Adafruit_VS1053_FilePlayer(BREAKOUT_RES
 
 String root = "/SOUNDS";
 
-String hurtSounds[] = {
-  "T12.mp3",
-  "Villagerhurt1.mp3"
-};
-String attackSounds[] = {
-  "hit.mp3",
-  "Villager1.mp3"
-};
-String dieSounds[] = {
-  "Villagerdead.mp3"
-};
-String otherSounds[] = {
-  "0_startup.mp3",
-  "1_connected.mp3",
-  "2_disconnected.mp3",
-  "3_pause.mp3",
-  "4_controller_disconnected.mp3",
-  "5_controller_connected.mp3"
-};
-String growlSounds[] = {
-  "185594__cylon8472__roar.mp3",
-  "332582__cylon8472__beast-roar-lvl4.mp3",
-  "366671__cylon8472__monster-growl.mp3"
-};
+
+int otherSounds = 6;
+int hurtSounds = 2;
+int attackSounds = 2;
+int dieSounds = 1;
+int growlSounds = 10;
 
 void setup() {
   randomSeed(analogRead(0));
   Wire.begin(ADDR_SOUND);
   Wire.onReceive(receiveEvent);
 
-  Serial.begin(9600);
-  Serial.println("Adafruit VS1053 Simple Test");
+  //Serial.begin(9600);
+  //Serial.println("Adafruit VS1053 Simple Test");
 
   if (! musicPlayer.begin()) { // initialise the music player
-    Serial.println(F("Couldn't find VS1053, do you have the right pins defined?"));
+    //Serial.println(F("Couldn't find VS1053, do you have the right pins defined?"));
     while (1);
   }
-  Serial.println(F("VS1053 found"));
+  //Serial.println(F("VS1053 found"));
 
   if (!SD.begin(CARDCS)) {
-    Serial.println(F("SD failed, or not present"));
+    //Serial.println(F("SD failed, or not present"));
     while (1);  // don't do anything more
   }
 
-  printDirectory(SD.open("/"), 0);
+  //printDirectory(SD.open("/"), 0);
 
   musicPlayer.setVolume(20, 20);
 
   musicPlayer.useInterrupt(VS1053_FILEPLAYER_PIN_INT);  // DREQ int
+
+  musicPlayer.stopPlaying();
+  //musicPlayer.startPlayingFile("/SOUNDS/0_OTHER/3.MP3");
 
 }
 
@@ -82,59 +67,64 @@ void loop() {
 }
 
 void receiveEvent(int howMany) {
+  //return;
   if (howMany == 0) {
-    //Serial.println("PING");
+    ////Serial.println("PING");
     return;
   }
-  int data = Wire.read();    // receive byte as an integer
+  int data = (int)Wire.read();    // receive byte as an integer
   int trackId = -1;
   if (howMany > 1) {
-    trackId = Wire.read();
+    trackId = (int)Wire.read();
   }
 
   if (data == 0) { // son par defaut
     musicPlayer.stopPlaying();
     if (trackId <= -1)
-      trackId =  random(0, sizeof(otherSounds) / sizeof(otherSounds[0]));
-    String filename = otherSounds[trackId];
-    filename = root + "/0_other/" + filename;
+      trackId =  random(0, otherSounds);
+    String filename = String(trackId) + ".MP3";
+    filename = root + "/0_OTHER/" + filename;
+    Serial.println(filename.c_str());
     musicPlayer.startPlayingFile(filename.c_str());
   }
 
   if (data == 1) { // Son quand il est touché
     musicPlayer.stopPlaying();
     if (trackId <= -1)
-      trackId =  random(0, sizeof(hurtSounds) / sizeof(hurtSounds[0]));
-    String filename = hurtSounds[trackId];
-    Serial.println("Playing: " + filename);
-    filename = root + "/1_hurt/" + filename;
+      trackId =  random(0, hurtSounds);
+    String filename = String(trackId) + ".MP3";
+    filename = root + "/1_HURT/" + filename;
+    Serial.println(filename.c_str());
     musicPlayer.startPlayingFile(filename.c_str());
   }
 
   if (data == 2) { // son quand il attaque
     musicPlayer.stopPlaying();
     if (trackId <= -1)
-      trackId =  random(0, sizeof(attackSounds) / sizeof(attackSounds[0]));
-    String filename = attackSounds[trackId];
-    filename = root + "/2_attack/" + filename;
+      trackId =  random(0, attackSounds);
+    String filename = String(trackId) + ".MP3";
+    filename = root + "/2_ATTACK/" + filename;
+    Serial.println(filename.c_str());
     musicPlayer.startPlayingFile(filename.c_str());
   }
 
   if (data == 3) { // son quand il meurt
     musicPlayer.stopPlaying();
     if (trackId <= -1)
-      trackId =  random(0, sizeof(dieSounds) / sizeof(dieSounds[0]));
-    String filename = dieSounds[trackId];
-    filename = root + "/3_die/" + filename;
+      trackId =  random(0, dieSounds);
+    String filename = String(trackId) + ".MP3";
+    filename = root + "/3_DIE/" + filename;
+    Serial.println(filename.c_str());
     musicPlayer.startPlayingFile(filename.c_str());
   }
 
   if (data == 4) { // son quand il meurt
     musicPlayer.stopPlaying();
     if (trackId <= -1)
-      trackId =  random(0, sizeof(growlSounds) / sizeof(growlSounds[0]));
-    String filename = growlSounds[trackId];
-    filename = root + "/4_growl/" + filename;
+      trackId =  random(0, growlSounds);
+    String filename = String(trackId) + ".MP3";
+    filename = root + "/4_GROWL/" + filename;
+    Serial.println(filename.c_str());
     musicPlayer.startPlayingFile(filename.c_str());
   }
 
@@ -144,10 +134,10 @@ void receiveEvent(int howMany) {
 
   if (data == 255) {
     if (! musicPlayer.paused()) {
-      Serial.println("Paused");
+      //Serial.println("Paused");
       musicPlayer.pausePlaying(true);
     } else {
-      Serial.println("Resumed");
+      //Serial.println("Resumed");
       musicPlayer.pausePlaying(false);
     }
   }
@@ -166,7 +156,7 @@ int listFiles(String dirName, String *buffer, int max) {
       break;
     }
     if (!entry.isDirectory()) {
-      Serial.print(entry.name());
+      //Serial.print(entry.name());
       buffer[nb] = entry.name();
       nb++;
     }
@@ -180,20 +170,20 @@ void printDirectory(File dir, int numTabs) {
     File entry =  dir.openNextFile();
     if (! entry) {
       // no more files
-      //Serial.println("**nomorefiles**");
+      ////Serial.println("**nomorefiles**");
       break;
     }
     for (uint8_t i = 0; i < numTabs; i++) {
-      Serial.print('\t');
+      //Serial.print('\t');
     }
-    Serial.print(entry.name());
+    //Serial.print(entry.name());
     if (entry.isDirectory()) {
-      Serial.println("/");
+      //Serial.println("/");
       printDirectory(entry, numTabs + 1);
     } else {
       // files have sizes, directories do not
-      Serial.print("\t\t");
-      Serial.println(entry.size(), DEC);
+      //Serial.print("\t\t");
+      //Serial.println(entry.size(), DEC);
     }
     entry.close();
   }
