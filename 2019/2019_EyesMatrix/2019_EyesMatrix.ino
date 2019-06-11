@@ -590,17 +590,19 @@ void textAnim(String text, int color, int dur) {
 
 
   if (currentTime % 70 == 0) {
+    char textChar[30]; 
+    text.toCharArray(textChar,30);
     //resetTime();
     refresh(matrix1);
     matrix[matrix1].setCursor(decalage, 0);
-    matrix[matrix1].print(text);
+    matrix[matrix1].print(textChar);
     matrix[matrix1].writeDisplay();
     refresh(matrix0);
     matrix[matrix0].setCursor(decalage + 15, 0);
-    matrix[matrix0].print(text);
+    matrix[matrix0].print(textChar);
     matrix[matrix0].writeDisplay();
     decalage--;
-    if (decalage <= -text.length() * 10)
+    if (decalage <= -strlen(textChar) * 10)
       decalage = 7;
 
   }

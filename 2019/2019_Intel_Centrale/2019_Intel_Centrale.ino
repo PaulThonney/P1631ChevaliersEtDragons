@@ -125,6 +125,7 @@ void setup() {
 
   Serial.println("Setup completed");
   delay(1000);
+  pingModules();
   setupRobot();
   sendSound(0, 0);// Starting sound
 }
@@ -226,7 +227,7 @@ void loopHurt() {
 }
 
 void pingModules() {
-  if (millis() < lastPingAt + 500) {
+  if (millis() <= lastPingAt + 500) {
     return;
   }
   lastPingAt = millis();
