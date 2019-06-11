@@ -24,17 +24,32 @@
 
 Adafruit_VS1053_FilePlayer musicPlayer = Adafruit_VS1053_FilePlayer(BREAKOUT_RESET, BREAKOUT_CS, BREAKOUT_DCS, DREQ, CARDCS);
 
-int hurtSoundsNb = 0;
-String hurtSounds[25];
+String root = "/SOUNDS";
 
-int attackSoundsNb = 0;
-String attackSounds[25];
-
-int dieSoundsNb = 0;
-String dieSounds[25];
-
-int otherSoundsNb = 0;
-String otherSounds[25];
+String hurtSounds[] = {
+  "T12.mp3",
+  "Villagerhurt1.mp3"
+};
+String attackSounds[] = {
+  "hit.mp3",
+  "Villager1.mp3"
+};
+String dieSounds[] = {
+  "Villagerdead.mp3"
+};
+String otherSounds[] = {
+  "0_startup.mp3",
+  "1_connected.mp3",
+  "2_disconnected.mp3",
+  "3_pause.mp3",
+  "4_controller_disconnected.mp3",
+  "5_controller_connected.mp3"
+};
+String growlSounds[] = {
+  "185594__cylon8472__roar.mp3",
+  "332582__cylon8472__beast-roar-lvl4.mp3",
+  "366671__cylon8472__monster-growl.mp3"
+};
 
 void setup() {
   randomSeed(analogRead(0));
@@ -78,7 +93,7 @@ void receiveEvent(int howMany) {
     if (trackId <= -1)
       trackId =  random(0, sizeof(otherSounds) / sizeof(otherSounds[0]));
     String filename = otherSounds[trackId];
-    filename = "/other/" + filename;
+    filename = root + "/0_other/" + filename;
     musicPlayer.startPlayingFile(filename.c_str());
   }
 
@@ -88,7 +103,7 @@ void receiveEvent(int howMany) {
       trackId =  random(0, sizeof(hurtSounds) / sizeof(hurtSounds[0]));
     String filename = hurtSounds[trackId];
     Serial.println("Playing: " + filename);
-    filename = "/hurt/" + filename;
+    filename = root + "/1_hurt/" + filename;
     musicPlayer.startPlayingFile(filename.c_str());
   }
 
@@ -97,7 +112,7 @@ void receiveEvent(int howMany) {
     if (trackId <= -1)
       trackId =  random(0, sizeof(attackSounds) / sizeof(attackSounds[0]));
     String filename = attackSounds[trackId];
-    filename = "/attack/" + filename;
+    filename = root + "/2_attack/" + filename;
     musicPlayer.startPlayingFile(filename.c_str());
   }
 
@@ -106,8 +121,21 @@ void receiveEvent(int howMany) {
     if (trackId <= -1)
       trackId =  random(0, sizeof(dieSounds) / sizeof(dieSounds[0]));
     String filename = dieSounds[trackId];
-    filename = "/die/" + filename;
+    filename = root + "/3_die/" + filename;
     musicPlayer.startPlayingFile(filename.c_str());
+  }
+
+  if (data == 4) { // son quand il meurt
+    musicPlayer.stopPlaying();
+    if (trackId <= -1)
+      trackId =  random(0, sizeof(growlSounds) / sizeof(growlSounds[0]));
+    String filename = growlSounds[trackId];
+    filename = root + "/4_growl/" + filename;
+    musicPlayer.startPlayingFile(filename.c_str());
+  }
+
+  if (data == 250) {
+    musicPlayer.stopPlaying();
   }
 
   if (data == 255) {
