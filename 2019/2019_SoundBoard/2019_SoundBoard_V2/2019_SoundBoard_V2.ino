@@ -88,6 +88,6 @@ void receiveEvent(int howMany) {
   if (trackId < 0) {
     trackId = random(0, catSounds[cat]);
   }
-  uint8_t piste = nbTracks(cat) + trackId;
+  uint8_t piste = cat * 10 + trackId;
   sfx.playTrack(piste);
 }
