@@ -30,7 +30,7 @@
 #define JOYSTICK_MARGIN 0.02f
 
 //MANETTE STATES
-#define CONNECTED 1
+#define CONNECTED 0
 
 #define EASY 0
 #define MEDIUM 1
@@ -123,7 +123,7 @@ void setup() {
   Serial2.begin(115200);
   Serial.begin(115200);
   setupRobot();
-  sendSound(0, 0);// Starting sound
+  sendSound(0, 4);// Starting sound
   Serial.println("Setup completed");
 }
 
@@ -892,4 +892,3 @@ String toHex(int num) {
   sprintf(buffer, "%x", num);
   return "0x" + String(buffer);
 }
-

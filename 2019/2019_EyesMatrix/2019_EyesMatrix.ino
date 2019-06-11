@@ -600,7 +600,7 @@ void textAnim(String text, int color, int dur) {
     matrix[matrix0].print(text);
     matrix[matrix0].writeDisplay();
     decalage--;
-    if (decalage <= -message.length() * 10)
+    if (decalage <= -text.length() * 10)
       decalage = 7;
 
   }

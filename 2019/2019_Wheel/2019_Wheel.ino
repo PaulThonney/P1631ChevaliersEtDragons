@@ -4,21 +4,21 @@
 
 #define ADDR_WHEEL 0x13
 
-#define USE_PID true
+#define USE_PID false
 
 #define NB_MOTORS 2
-#define HOLE_NUMBER 30
-#define WHEEL_RADIUS 10 // radius [mm]
+#define HOLE_NUMBER 20
+#define WHEEL_RADIUS 30 // radius [mm]
 
 #define PWM_OUTPUT_MOTOR_L 4 // Pin 5 où sort le pwm du moteur 2
 #define INPUT_4_MOTOR_L    3  // Pin 9 pour un sens
 #define INPUT_3_MOTOR_L    9  // Pin 3 pour l'autre sens
-#define CAPTOR_MOTOR_L    2
+#define CAPTOR_MOTOR_L    A0
 
 #define PWM_OUTPUT_MOTOR_R 7 // Pin 6 où sort le pwm du moteur 1
 #define INPUT_2_MOTOR_R    10  // Pin 10 pour un sens
 #define INPUT_1_MOTOR_R    11  // Pin 11 pour l'autre sens
-#define CAPTOR_MOTOR_R    2
+#define CAPTOR_MOTOR_R    A1
 
 #define PIN_TEMP_R  A2
 #define PIN_TEMP_L  A3

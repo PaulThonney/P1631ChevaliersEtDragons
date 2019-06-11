@@ -43,11 +43,13 @@ void setup() {
     while (1);  // don't do anything more
   }
 
-  printDirectory(SD.open("/"), 0);
+  printDirectory(SD.open("/SOUNDS/"), 0);
 
   musicPlayer.setVolume(20, 20);
 
   musicPlayer.useInterrupt(VS1053_FILEPLAYER_PIN_INT);  // DREQ int
+
+  Serial.println(getDirSize("/", false));
 
 }
 
@@ -56,7 +58,7 @@ void loop() {
 
 void receiveEvent(int howMany) {
   if (howMany == 0) {
-    Serial.println("PING");
+    //Serial.println("PING");
     return;
   }
   int data = Wire.read();    // receive byte as an integer
@@ -66,7 +68,7 @@ void receiveEvent(int howMany) {
   }
 
   if (data < getDirSize("/", false)) {
-    play("/" + getDirName(data), trackId);
+    play("/" + getDirName("/", data), trackId);
   }
 
   if (data == 250) {
@@ -86,18 +88,19 @@ void receiveEvent(int howMany) {
 }
 
 void play(String dir, int id) {
+  Serial.println(String(dir) + " " + String(id) );
   musicPlayer.pausePlaying(false);
   musicPlayer.stopPlaying();
   if (id <= -1)
     id =  random(0, getDirSize(dir, true));
   String filename = getFileName(dir, id);
+  filename = "/SOUNDS"+dir + "/" + filename;
   Serial.println("Playing: " + filename);
-  filename = dir + "/" + filename;
   musicPlayer.startPlayingFile(filename.c_str());
 }
 
 int getDirSize(String dirName, bool onlyFiles) {
-  File dir = SD.open(dirName);
+  File dir = SD.open("/SOUNDS" + dirName);
   int nb = 0;
   while (true) {
     File entry =  dir.openNextFile();
@@ -113,7 +116,7 @@ int getDirSize(String dirName, bool onlyFiles) {
 }
 
 String getDirName(String dirName, int id) {
-  File dir = SD.open(dirName);
+  File dir = SD.open("/SOUNDS" + dirName);
   int nb = 0;
   while (true) {
     File entry =  dir.openNextFile();
@@ -131,7 +134,7 @@ String getDirName(String dirName, int id) {
 }
 
 String getFileName(String dirName, int id) {
-  File dir = SD.open(dirName);
+  File dir = SD.open("/SOUNDS" + dirName);
   int nb = 0;
   while (true) {
     File entry =  dir.openNextFile();
