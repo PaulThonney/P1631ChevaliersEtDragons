@@ -39,7 +39,7 @@ Adafruit_Soundboard sfx = Adafruit_Soundboard(&ss, NULL, SFX_RST);
 // can also try hardware serial with
 // Adafruit_Soundboard sfx = Adafruit_Soundboard(&Serial1, NULL, SFX_RST);
 
-int catSounds[] = {2, 6, 4, 2};
+int catSounds[] = {6, 2, 2, 6};
 
 void setup() {
   Wire.begin(ADDR_SOUND);

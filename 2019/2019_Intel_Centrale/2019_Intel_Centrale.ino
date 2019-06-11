@@ -122,15 +122,18 @@ void setup() {
   Wire.begin(ADDR_INTELLIGENCE_CENTRALE);
   Serial2.begin(115200);
   Serial.begin(115200);
-  setupRobot();
-  sendSound(0, 3);// Starting sound
+
   Serial.println("Setup completed");
+  setupRobot();
+  sendSound(0, 0);// Starting sound
 }
 
 void loop() {
   long timeStartAt = millis();
-  communicationController(); // On commence par communiquer les dernières infos avec la manette
+  //communicationController(); // On commence par communiquer les dernières infos avec la manette
   pingModules();
+  loopAmbiant();
+  logs();
   if (millis() > askResponseAt + 25) {
     askResponseAt = 0;
     waitingResponse = false;
@@ -165,7 +168,6 @@ void loop() {
         break;
       }
   }
-  logs();
   loopTime = millis() - timeStartAt;
 }
 
@@ -269,11 +271,13 @@ bool sendData(int addr, byte *buffer, int nbBytes) {
   return Wire.endTransmission() == 1;
 }
 
+unsigned long lastAmbiantAt = 0;
 void loopAmbiant() {
   if (IS_MINOTAURE) {
-    if (random(500) == 0) {
+    if (millis() > lastAmbiantAt) {
       sendSound(4);//GROWL
       sendEyes(6);//ANGRY
+      lastAmbiantAt = millis() + random(1000, 2500);
     }
   }
 }
@@ -646,7 +650,7 @@ void logs() {
   Serial.println("isFindTarget: " + String(isFindTarget));
   Serial.println("currentDifficulty: " + String(currentDifficulty));
   Serial.println("currentMotorValue 1: " + String(currentMotorValue[0]) + "%");
-  Serial.println("currentMotorValue 2: " + String(currentMotorValue[1]) + "%"); 
+  Serial.println("currentMotorValue 2: " + String(currentMotorValue[1]) + "%");
   Serial.println("Module Tracking (" + toHex(modules[0]) + "): " + String((stateModules[0] ? "CONNECTED" : "DISCONNECTED")));
   Serial.println("Module Contact (" + toHex(modules[1]) + "): " + String((stateModules[1] ? "CONNECTED" : "DISCONNECTED")));
   Serial.println("Module Sound (" + toHex(modules[2]) + "): " + String((stateModules[2] ? "CONNECTED" : "DISCONNECTED")));
