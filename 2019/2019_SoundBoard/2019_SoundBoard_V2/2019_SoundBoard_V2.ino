@@ -50,18 +50,37 @@ void setup() {
 
   // softwareserial at 9600 baud
   ss.begin(9600);
-  // can also do Serial1.begin(9600)
-
-  if (!sfx.reset()) {
-    Serial.println("Not found");
-    while (1);
-  }
+  sfx.reset();
   Serial.println("SFX board found");
-  pinMode (2, INPUT);
+
+  list();
 }
 
+void list() {
+  uint8_t files = sfx.listFiles();
+
+  Serial.println("File Listing");
+  Serial.println("========================");
+  Serial.println();
+  Serial.print("Found "); Serial.print(files); Serial.println(" Files");
+  for (uint8_t f = 0; f < files; f++) {
+    Serial.print(f);
+    Serial.print("\tname: "); Serial.print(sfx.fileName(f));
+    Serial.print("\tsize: "); Serial.println(sfx.fileSize(f));
+  }
+  Serial.println("========================");
+}
+
+uint8_t piste = 0;
+bool play = false;
 
 void loop() {
+  if (!play)return;
+  play = false;
+  if (! sfx.playTrack(piste) ) {
+    Serial.println("Failed to play track?");
+  }
+
 }
 
 int nbTracks(int nMax) {
@@ -80,14 +99,21 @@ void receiveEvent(int howMany) {
     //Serial.println("PING");
     return;
   }
-  int cat = Wire.read();    // receive byte as an integer
+  int cat = (int)Wire.read();    // receive byte as an integer
+  if (cat >= 250) {
+    sfx.stop();
+    Serial.println("STOP");
+    return;
+  }
   int trackId = -1;
   if (howMany > 1) {
-    trackId = Wire.read();
+    trackId = (int)Wire.read();
   }
   if (trackId < 0) {
     trackId = random(0, catSounds[cat]);
   }
-  uint8_t piste = cat * 10 + trackId;
-  sfx.playTrack(piste);
+  piste = cat * 10 + trackId;
+  Serial.print("PLAYING:");
+  Serial.println(piste);
+  play = true;
 }

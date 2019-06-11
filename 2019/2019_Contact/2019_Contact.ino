@@ -205,10 +205,10 @@ void animRainbow() {
 }
 
 void animShield() {
-  int v = (sin(millis() / 500.0) + 1) / 2.0 * 155 + 100;
+  int v = (sin(millis() / 225.0) + 1) / 2.0 * 155 + 10;
   uint32_t c = matrice[0].Color(0, 0, v);
   for (uint8_t i = 0; i < MATRIX_NUMBER; i++) {
-    showLed(i, BLUE);
+    showLed(i, v);
   }
 }
 
