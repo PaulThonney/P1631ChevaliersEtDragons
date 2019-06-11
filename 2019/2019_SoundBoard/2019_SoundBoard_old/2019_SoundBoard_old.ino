@@ -82,6 +82,10 @@ void loop() {
 }
 
 void receiveEvent(int howMany) {
+  if (howMany == 0) {
+    //Serial.println("PING");
+    return;
+  }
   int data = Wire.read();    // receive byte as an integer
   int trackId = -1;
   if (howMany > 1) {
