@@ -39,7 +39,7 @@ Adafruit_Soundboard sfx = Adafruit_Soundboard(&ss, NULL, SFX_RST);
 // can also try hardware serial with
 // Adafruit_Soundboard sfx = Adafruit_Soundboard(&Serial1, NULL, SFX_RST);
 
-int catSounds[] = {6, 2, 2, 6};
+int catSounds[] = {6, 2, 2, 1, 6};
 
 void setup() {
   Wire.begin(ADDR_SOUND);
@@ -73,14 +73,25 @@ void list() {
 
 uint8_t piste = 0;
 bool play = false;
+bool stop = false;
 
-void loop() {
+void loopPlay() {
   if (!play)return;
   play = false;
   if (! sfx.playTrack(piste) ) {
     Serial.println("Failed to play track?");
   }
-
+}
+void loopStop() {
+  if (!stop)return;
+  stop = false;
+  if (! sfx.stop() ) {
+    Serial.println("Failed to stop track?");
+  }
+}
+void loop() {
+  loopPlay();
+  loopStop();
 }
 
 int nbTracks(int nMax) {
@@ -101,8 +112,7 @@ void receiveEvent(int howMany) {
   }
   int cat = (int)Wire.read();    // receive byte as an integer
   if (cat >= 250) {
-    sfx.stop();
-    Serial.println("STOP");
+    stop = true;
     return;
   }
   int trackId = -1;
@@ -112,8 +122,9 @@ void receiveEvent(int howMany) {
   if (trackId < 0) {
     trackId = random(0, catSounds[cat]);
   }
-  piste = cat * 10 + trackId;
+  piste = nbTracks(cat) + trackId;
   Serial.print("PLAYING:");
-  Serial.println(piste);
+  Serial.println(sfx.fileName(piste));
   play = true;
+  stop = true;
 }

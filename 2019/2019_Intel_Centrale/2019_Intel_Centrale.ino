@@ -30,7 +30,7 @@
 #define JOYSTICK_MARGIN 0.02f
 
 //MANETTE STATES
-#define CONNECTED 0
+#define CONNECTED 1
 
 #define EASY 0
 #define MEDIUM 1
@@ -124,6 +124,7 @@ void setup() {
   Serial.begin(115200);
 
   Serial.println("Setup completed");
+  delay(1000);
   setupRobot();
   sendSound(0, 0);// Starting sound
 }
@@ -277,7 +278,7 @@ void loopAmbiant() {
     if (millis() > lastAmbiantAt) {
       sendSound(4);//GROWL
       sendEyes(6);//ANGRY
-      lastAmbiantAt = millis() + random(1000, 2500);
+      lastAmbiantAt = millis() + random(1000, 60000);
     }
   }
 }
@@ -385,7 +386,7 @@ void loopManuel() {
 }
 
 bool sendSound(int id, int data) {
-  if (waitingResponse)return false;
+  if (waitingResponse || !stateModules[2])return false;
   nbTransmission++;
   Wire.beginTransmission(ADDR_SOUND);
   Wire.write(id);
@@ -397,7 +398,7 @@ bool sendSound(int id, int data) {
 }
 
 bool sendContact(int id, int data, int duration) {
-  if (waitingResponse)return false;
+  if (waitingResponse || !stateModules[1])return false;
   nbTransmission++;
   Wire.beginTransmission(ADDR_CONTACT);
   Wire.write(id);
@@ -412,7 +413,7 @@ bool sendContact(int id, int data, int duration) {
 }
 
 bool sendTracking(int id) {
-  if (waitingResponse)return false;
+  if (waitingResponse || !stateModules[0])return false;
   nbTransmission++;
   Wire.beginTransmission(ADDR_TRACKING);
   Wire.write(id);
@@ -421,7 +422,7 @@ bool sendTracking(int id) {
 }
 
 bool sendEyes(int id, int data) {
-  if (waitingResponse)return false;
+  if (waitingResponse || !stateModules[4])return false;
   nbTransmission++;
   Wire.beginTransmission(ADDR_EYES);
   Wire.write(id);
@@ -432,7 +433,7 @@ bool sendEyes(int id, int data) {
 }
 
 bool sendMotorValue(byte id, int value) {
-  if (waitingResponse)return false;
+  if (waitingResponse || !stateModules[3])return false;
   if (currentMotorValue[id] == value)return true; //évite de faire une comm si rien n'a changé
   currentMotorValue[id] = value;
   byte data = abs(value);
@@ -681,7 +682,8 @@ float TriggerValue(byte v) {
    @return byte
 */
 byte InfoController() {
-  return dataBuffer[8];
+  return 1;
+  //return dataBuffer[8];
 }
 
 /*
