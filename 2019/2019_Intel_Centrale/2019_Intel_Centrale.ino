@@ -39,6 +39,8 @@
 #define MAX_SPEED 0
 #define COOLDOWN 1
 
+unsigned long timeStartAt;
+
 bool ButtonA(bool flanc = false);
 bool ButtonB(bool flanc = false);
 bool ButtonX(bool flanc = false);
@@ -57,7 +59,6 @@ bool flancsMontants[14];
 
 byte modules[5] =  {ADDR_TRACKING, ADDR_CONTACT, ADDR_SOUND, ADDR_WHEEL, ADDR_EYES};
 bool stateModules[5];
-unsigned long lastPingAt = 0;
 
 byte dataBuffer[BUFFER_SIZE];
 byte controllerOutput = 0;
@@ -75,15 +76,16 @@ typedef enum State { // On définit les états possible de la machine
 } State;
 
 State setState(State state, int menuPos = -1);
-State savedMode = State::Automatique;
-State currentState = State::MenuSelection; // On démarre sur le menu de sélection
+State savedMode = State::Manuel;
+State currentState = State::Manuel; // On démarre sur le menu de sélection
 State previousState; // Ancien état
 
 bool isStartedState = false;
 
 int stateMenuPos = 0; // Position du curseur
-
-unsigned long askResponseAt;
+unsigned long lastContactAt = 0;
+unsigned long askResponseAt = 0;
+unsigned long lastPingAt = 0;
 bool waitingResponse = false;
 int nbRequest;
 int nbTransmission;
@@ -131,7 +133,7 @@ void setup() {
 }
 
 void loop() {
-  long timeStartAt = millis();
+  timeStartAt = millis();
   //communicationController(); // On commence par communiquer les dernières infos avec la manette
   pingModules();
   loopAmbiant();
@@ -182,14 +184,26 @@ void setupRobot() {
   sendSound(250);//StopSound
 }
 
+int boostSpeed() {
+  int percent = 0;
+  if (isCooldown()) {
+    percent += 50;
+  }
+  return percent;
+}
+
 void resumeGame() {
   sendEyes(0);
   sendContact(CONTACT_DEFAULT_MODE);
   sendSound(250);//StopSound
 }
 
+bool isCooldown() {
+  return (millis() < hurtCooldown);
+}
+
 bool hurt(byte dmg) {
-  if (millis() < hurtCooldown)return false; //Cooldown
+  if (isCooldown())return false; //Cooldown
   int cooldownDuration = getDifficulty(COOLDOWN);
   hurtCooldown = millis() + cooldownDuration;
   currentLife -= dmg;
@@ -210,7 +224,12 @@ void die() {
   sendContact(4);//animDead
 }
 
+
 void loopHurt() {
+  if (millis() <= lastContactAt + 50) {
+    return;
+  }
+  lastContactAt = millis();
   byte buffer[2];
   if (getData(ADDR_CONTACT, buffer, 2)) {
     if ((bool)buffer[0] == true) {
@@ -300,6 +319,10 @@ void loopDisconnected() {
   }
 }
 
+int getSpeed(int speed) {
+  return ((100 + boostSpeed()) * speed) / 100.0;
+}
+
 /*
    Fonction qui gère le mode automatique des robots
    Pour le moment elle récupère uniquement l'angle du servo et le transmet aux roues.
@@ -331,13 +354,13 @@ void loopAutomatique() {
 
   if (headAngle > -5 && headAngle < 5) {
     if (isFindTarget) {
-      int speed = map(targetDistance, 0, 255, 10, getDifficulty(MAX_SPEED));
+      int speed = getSpeed(map(targetDistance, 0, 255, 10, getDifficulty(MAX_SPEED)));
       sendMotorValue(0, speed);
       sendMotorValue(1, speed);
     }
 
   } else {
-    int speed = map(abs(headAngle), 0, 90, 10, getDifficulty(MAX_SPEED));
+    int speed = getSpeed(map(abs(headAngle), 0, 90, 10, getDifficulty(MAX_SPEED)));
     if (headAngle < 0) {
       sendMotorValue(0, speed);
       sendMotorValue(1, -speed);
@@ -358,7 +381,7 @@ void loopManuel() {
     sendTracking(0x2E);
   }
 
-  sendEyes(5, (map(AxisLX(), 0, 255, 0, 6) << 3) | map(AxisLY(), 0, 255, 0, 6));
+  //sendEyes(5, (map(AxisLX(), 0, 255, 0, 6) << 3) | map(AxisLY(), 0, 255, 0, 6));
 
   if (checkPause()) { // quitte directement la loop si la pause est pressée et évite que le "state" puisse être changé dans la fonction
     return;
@@ -382,8 +405,8 @@ void loopManuel() {
     speed2 *= (1 - abs(jX));
   }
 
-  sendMotorValue(0, speed1);
-  sendMotorValue(1, speed2);
+  sendMotorValue(0, getSpeed(speed1));
+  sendMotorValue(1, getSpeed(speed2));
 }
 
 bool sendSound(int id, int data) {
@@ -438,6 +461,7 @@ bool sendMotorValue(byte id, int value) {
   if (currentMotorValue[id] == value)return true; //évite de faire une comm si rien n'a changé
   currentMotorValue[id] = value;
   byte data = abs(value);
+  if ( data > 100)data = 100;
   if ((value < 0)) {
     bitSet(data, 7);
   }

@@ -164,6 +164,26 @@ dead_bmp[] =
   B00100100,
   B01000010,
   B10000001,
+},
+heart1_bmp[] =
+{ B01100110,
+  B11111111,
+  B11111111,
+  B11111111,
+  B11111111,
+  B01111110,
+  B00111100,
+  B00011000,
+},
+heart2_bmp[] =
+{ B00000000,
+  B01100110,
+  B01111110,
+  B01111110,
+  B01111110,
+  B00111100,
+  B00011000,
+  B00000000,
 };
 
 void refresh(int nb_matrix)
@@ -590,8 +610,8 @@ void textAnim(String text, int color, int dur) {
 
 
   if (currentTime % 70 == 0) {
-    char textChar[30]; 
-    text.toCharArray(textChar,30);
+    char textChar[30];
+    text.toCharArray(textChar, 30);
     //resetTime();
     refresh(matrix1);
     matrix[matrix1].setCursor(decalage, 0);
@@ -648,6 +668,23 @@ void deathAnim() {
   refresh(matrix1);
   matrix[matrix0].drawBitmap(0, 0, dead_bmp, 8, 8, LED_RED);
   matrix[matrix1].drawBitmap(0, 0, dead_bmp, 8, 8, LED_RED);
+  matrix[matrix0].writeDisplay();
+  matrix[matrix1].writeDisplay();
+  posx = 3;
+  posy = 3;
+}
+
+
+void loveAnim() {
+  refresh(matrix0);
+  refresh(matrix1);
+  if (millis() % 1000 > 500) {
+    matrix[matrix0].drawBitmap(0, 0, heart1_bmp, 8, 8, LED_RED);
+    matrix[matrix1].drawBitmap(0, 0, heart1_bmp, 8, 8, LED_RED);
+  } else {
+    matrix[matrix0].drawBitmap(0, 0, heart2_bmp, 8, 8, LED_RED);
+    matrix[matrix1].drawBitmap(0, 0, heart2_bmp, 8, 8, LED_RED);
+  }
   matrix[matrix0].writeDisplay();
   matrix[matrix1].writeDisplay();
   posx = 3;
@@ -736,6 +773,7 @@ void loop() {
     case 6: angryAnim(); break;
     case 7: textAnim("LOST CONNECTION", LED_RED); break;
     case 8: textAnim("CONNECTED", LED_GREEN, 1000); break;
+    case 9: loveAnim(); break;
   }
 }
 
