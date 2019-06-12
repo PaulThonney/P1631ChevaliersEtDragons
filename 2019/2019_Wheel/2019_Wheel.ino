@@ -1,3 +1,4 @@
+// Maxime Scharwath
 #include <SoftPWM.h>
 #include <Wire.h>
 #include <PID_v1.h>// PID by Brett Beauregard
@@ -65,6 +66,7 @@ void setup() {
 
   Wire.begin(ADDR_WHEEL);
   Wire.onReceive(receiveEvent);
+  Wire.onRequest(requestEvent);
 
   //Moteur droite
   SoftPWMSet(PWM_OUTPUT_MOTOR_R, 0);
@@ -251,5 +253,15 @@ void receiveEvent(int howMany) {
   if (!setMotorValue(motorId, motorValue)) {
     Serial.println("ERREUR MOTEUR");
   }
+}
+
+void requestEvent() {
+  Serial.println("REQUEST");
+  byte temp = 0;
+  bitWrite(temp, 0, tempOverheating[0]);
+  bitWrite(temp, 1, tempOverheating[1]);
+  Wire.write(temp);
+  Wire.write((byte *)&RPM[0][1], sizeof(int));
+  Wire.write((byte *)&RPM[1][1], sizeof(int));
 }
 /////////////////////////////////////////////////////////////

@@ -13,6 +13,7 @@ Servo servo; // donne un nom de Servomoteur
 
 //adresse I2C
 #define ADDR_TRACKING 0x10
+#define WATCHTIMES_TIMEOUT 2500
 #define PIN_SERVO 5
 #define TEMPS_CONTINUE_RECHERCHE 2000
 #define VITESSE_ROTATION_RECHERCHE 250
@@ -26,6 +27,7 @@ bool needToTrack = false;
 bool wantedMessage = false;
 int posObj; //position de l'objet
 byte distance;
+byte angle;
 
 int nbRequest;
 
@@ -48,9 +50,14 @@ void setup() {
   Serial.print("Starting...\n");
 
   pixy.init(); //démarre la caméra Pixy
+  pixy.setLED(255, 0, 0); //set Pixy led RED
 }
 
 void loop() {
+  if (millis() > watchTimes + WATCHTIMES_TIMEOUT) {
+    Serial.println("TIME OUT");
+    needToTrack = false;
+  }
   tracking();
 }
 
@@ -59,24 +66,25 @@ unsigned int count = 0;
 
 void requestEvent() {
   nbRequest++;
+  Wire.write(byte(angle));
+  Wire.write(byte(distance));
+  Wire.write(byte(isTracking));
+
   Serial.println("REQUEST " + String(nbRequest));
-  Serial.println(byte(servo.read()));
+  Serial.println(byte(angle));
   Serial.println(byte(distance));
   Serial.println(byte(isTracking));
-
-  Wire.write((servo.read()));
-  Wire.write((distance));
-  Wire.write((isTracking));
 }
 
 void tracking() {
   uint16_t blocks; //nombre d'objets détecté par la Pixy
-  if (pixy.getBlocks()) {
-    isTracking = true;
+  isTracking = pixy.getBlocks() > 0;
+  if (isTracking) {
     blocks = pixy.getBlocks();
     lastTimeViewObject = millis();
     float posObj = posObject(pixy.blocks[0].x);
     int width = (pixy.blocks[0].width);
+    angle = servo.read();
     distance = map(width, 100, 15, 0, 255);
     if (distance < 0) {
       distance = 0;
@@ -88,11 +96,11 @@ void tracking() {
     float posObjpositif = abs(posObj);
     int incrementation = mapfloat(posObjpositif, 0 , 1 , 0, 6);
     if (posObj < 0) {
-      servo.write(servo.read() - incrementation);
+      servo.write(angle - incrementation);
       lastSideObject = 1;
     }
     else if (posObj > 0) {
-      servo.write(servo.read() + incrementation);
+      servo.write(angle + incrementation);
       lastSideObject = 0;
     }
   }
@@ -101,7 +109,6 @@ void tracking() {
     if (millis() < lastTimeViewObject + TEMPS_ATTENTE_RECHERCHE) {
       return;
     }
-    isTracking = false;
     if (!needToTrack) {
       servo.write(90);
       return;
@@ -112,19 +119,18 @@ void tracking() {
     if (millis() < lastTimeViewObject + TEMPS_CONTINUE_RECHERCHE) {
       sensBalayage = lastSideObject;
     }
-    byte pos = servo.read();
-    //Serial.println(String(sensBalayage) + " " + String(pos));
+    //Serial.println(String(sensBalayage) + " " + String(angle));
     if (sensBalayage) {
-      servo.write(pos - 1);
+      servo.write(angle - 1);
     }
     else {
-      servo.write(pos + 1);
+      servo.write(angle + 1);
     }
 
-    if (pos <= 5 ) {
+    if (angle <= 5 ) {
       sensBalayage = 0;
     }
-    if (pos >= 175) {
+    if (angle >= 175) {
       sensBalayage = 1;
     }
   }
@@ -132,7 +138,7 @@ void tracking() {
 
 void receiveEvent(int howMany) {
   if (howMany == 0) {
-    Serial.println("PING");
+    watchTimes = millis();
     return;
   }
   int message = (uint8_t)Wire.read();
@@ -143,9 +149,6 @@ void receiveEvent(int howMany) {
       break;
     case 0x2E:
       needToTrack = false;
-      break;
-    case 0x3E:
-      //wantedMessage = true;
       break;
   }
 }

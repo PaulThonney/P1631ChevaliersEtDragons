@@ -18,7 +18,7 @@
 
 #define IS_MINOTAURE true
 
-#define LOGS_DELAY 1000
+#define LOGS_DELAY 2000
 
 //DEFINE ROBOT
 
@@ -173,7 +173,7 @@ void loop() {
   }
   loopTime = millis() - timeStartAt;
 
-  //logs();
+  logs();
 }
 
 void setupRobot() {
@@ -286,8 +286,11 @@ bool getData(int addr, byte *buffer, int nbBytes) {
   waitingResponse = true;
   Wire.requestFrom(addr, nbBytes); // Request the transmitted two bytes from the two registers
   if (Wire.available() <= nbBytes) {
-    for (int i = 0; i < nbBytes; i++) {
+    int i = 0;
+    while (Wire.available()) {
+      if (i >= nbBytes)break;
       buffer[i] = Wire.read();
+      i++;
     }
     waitingResponse = false;
     return true;
@@ -411,7 +414,7 @@ void loopManuel() {
     setState(State::MenuSelection);
   }
 
-  
+
   controllerOutput = 27;
 
   float jX = JoystickValue(AxisLX());
