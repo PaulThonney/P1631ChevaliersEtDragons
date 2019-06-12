@@ -45,7 +45,7 @@ Adafruit_NeoPixel matrice[MATRIX_NUMBER] = {
 
 byte oldContact[MATRIX_NUMBER] = {HIGH, HIGH, HIGH, HIGH, HIGH, HIGH};
 
-bool contactUsed[MATRIX_NUMBER] = {true, false, true, true, true, false};
+bool contactUsed[MATRIX_NUMBER] = {false, true, false, true, true, true};
 
 uint64_t currentTimes[MATRIX_NUMBER];
 uint16_t cycle[MATRIX_NUMBER];
@@ -86,6 +86,7 @@ void setup() {
 }
 
 void requestEvent() {
+  Serial.println("REQUEST");
   Wire.write(getHit);
   Wire.write(lastHitZone);
   getHit = false;
@@ -93,7 +94,7 @@ void requestEvent() {
 
 void receiveEvent(int howMany) {
   if (howMany == 0) {
-    Serial.println("PING");
+    //Serial.println("PING");
     return;
   }
   setMode(Wire.read());
@@ -153,9 +154,12 @@ void checkContact() {
   };
 
   for (uint8_t i = 0; i < MATRIX_NUMBER; i++) {
-    if (newContact[i] == LOW && oldContact[i] == HIGH && contactUsed[i] && millis() > 1000) {
-      getHit = true;
-      lastHitZone = i;
+    if (newContact[i] == LOW && oldContact[i] == HIGH && contactUsed[i]) {
+      if (!getHit) {
+        getHit = true;
+        lastHitZone = i;
+      }
+      
       Serial.println("contact");
     }
     oldContact[i] = newContact[i];

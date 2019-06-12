@@ -77,7 +77,7 @@ typedef enum State { // On définit les états possible de la machine
 
 State setState(State state, int menuPos = -1);
 State savedMode = State::Manuel;
-State currentState = State::Manuel; // On démarre sur le menu de sélection
+State currentState = State::Automatique; // On démarre sur le menu de sélection
 State previousState; // Ancien état
 
 bool isStartedState = false;
@@ -97,7 +97,7 @@ bool sendContact(int id, int data = -1, int duration = -1);
 
 // maxSpeed[%] - hurtCooldown[ms]
 int difficulty[][2] = {
-  {40, 5000},//easy
+  {40, 500},//easy
   {75, 2500},//medium
   {100, 1000}//hard
 };
@@ -137,7 +137,6 @@ void loop() {
   //communicationController(); // On commence par communiquer les dernières infos avec la manette
   pingModules();
   loopAmbiant();
-  logs();
   if (millis() > askResponseAt + 25) {
     askResponseAt = 0;
     waitingResponse = false;
@@ -173,6 +172,8 @@ void loop() {
       }
   }
   loopTime = millis() - timeStartAt;
+
+  //logs();
 }
 
 void setupRobot() {
@@ -202,11 +203,15 @@ bool isCooldown() {
   return (millis() < hurtCooldown);
 }
 
-bool hurt(byte dmg) {
-  if (isCooldown())return false; //Cooldown
+bool hurt(int dmg) {
+  if (dmg <= 0)return false;
+  Serial.println("Cooldown:" + String(isCooldown()));
+  if (millis() < hurtCooldown)return false; //Cooldown
   int cooldownDuration = getDifficulty(COOLDOWN);
   hurtCooldown = millis() + cooldownDuration;
   currentLife -= dmg;
+  Serial.println(String(dmg) + " dmg");
+  Serial.println(String(currentLife) + " lives");
   if (currentLife <= 0) {//DEAD
     currentLife = 0;
     die();
@@ -224,21 +229,28 @@ void die() {
   sendContact(4);//animDead
 }
 
+bool isDead() {
+  return (currentLife <= 0);
+}
+
 
 void loopHurt() {
-  if (millis() <= lastContactAt + 50) {
+  if (millis() <= lastContactAt + 1000) {
     return;
   }
   lastContactAt = millis();
   byte buffer[2];
   if (getData(ADDR_CONTACT, buffer, 2)) {
     if ((bool)buffer[0] == true) {
-      byte dmg = 0;
+      int dmg = 0;
+      Serial.println("Which Contact:" + String(buffer[1]));
       switch (buffer[1]) {
         case 0: dmg = 1; break;
         case 1: dmg = 1; break;
         case 2: dmg = 1; break;
         case 3: dmg = 1; break;
+        case 4: dmg = 1; break;
+        case 5: dmg = 1; break;
       }
       hurt(dmg);
     }
@@ -269,6 +281,7 @@ bool pingAddr(int addr) {
 
 bool getData(int addr, byte *buffer, int nbBytes) {
   if (waitingResponse)return false;
+  if (!pingAddr(addr))return false;
   nbRequest++;
   waitingResponse = true;
   Wire.requestFrom(addr, nbBytes); // Request the transmitted two bytes from the two registers
@@ -294,11 +307,12 @@ bool sendData(int addr, byte *buffer, int nbBytes) {
 
 unsigned long lastAmbiantAt = 0;
 void loopAmbiant() {
+  if (isDead())return;
   if (IS_MINOTAURE) {
     if (millis() > lastAmbiantAt) {
       sendSound(4);//GROWL
       sendEyes(6);//ANGRY
-      lastAmbiantAt = millis() + random(1000, 60000);
+      lastAmbiantAt = millis() + random(5000, 15000);
     }
   }
 }
@@ -338,6 +352,10 @@ void loopAutomatique() {
 
   loopHurt();
 
+  if (isDead()) {
+    setState(State::MenuSelection);
+  }
+
   if (millis() - lastUpdateHead >  25) { //demande à la pixy ces valeurs toutes les 25ms
 
     byte buffer[3];
@@ -349,7 +367,7 @@ void loopAutomatique() {
       waitingResponse = false;
       lastUpdateHead = millis();
     }
-    sendEyes(5, (3 << 3) | map(headAngle, -90, 90, 0, 6));
+    //sendEyes(5, (3 << 3) | map(headAngle, -90, 90, 0, 6));
   }
 
   if (headAngle > -5 && headAngle < 5) {
@@ -388,6 +406,12 @@ void loopManuel() {
   }
 
   loopHurt();
+
+  if (isDead()) {
+    setState(State::MenuSelection);
+  }
+
+  
   controllerOutput = 27;
 
   float jX = JoystickValue(AxisLX());

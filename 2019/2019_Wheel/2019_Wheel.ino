@@ -1,4 +1,4 @@
-times#include <SoftPWM.h>
+#include <SoftPWM.h>
 #include <Wire.h>
 #include <PID_v1.h>// PID by Brett Beauregard
 
@@ -112,7 +112,7 @@ void checkRPM(int dur) {
         RPM[i][2] = RPM[i][1];//MAX RPM
       }
       RPM[i][0] = 0;
-      Serial.println("RPM (" + String(i) + ") : " + String(RPM[i][1]) + ", " + String(getSpeed(i)) + " m/s");
+      //Serial.println("RPM (" + String(i) + ") : " + String(RPM[i][1]) + ", " + String(getSpeed(i)) + " m/s");
     }
     prevtime = currtime;
   }
@@ -149,7 +149,7 @@ void checkTemp() {
 
 
   //DEBUG
-  if (false) {
+  if (true) {
     Serial.println("==TEMPERATURE==");
     Serial.println("Temp Right: " + String(tempR) + "°C");
     Serial.println("Temp Left: " + String(tempL) + "°C");
