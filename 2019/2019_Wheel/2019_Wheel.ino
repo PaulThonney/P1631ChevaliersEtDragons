@@ -85,6 +85,8 @@ void setup() {
 
 
   pinMode(PIN_LED_URGENCE, OUTPUT);
+  pinMode(PIN_VENT_R, OUTPUT);
+  pinMode(PIN_VENT_L, OUTPUT);
   digitalWrite(PIN_LED_URGENCE, LOW); //Eteint la led d'urgence
   pinMode (4, INPUT);//désactivation de pin
   pinMode (5, INPUT);//désactivation de pin
