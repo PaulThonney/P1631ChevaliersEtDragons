@@ -28,7 +28,7 @@
 #define PIN_VENT_R  12
 #define PIN_VENT_L  8
 #define PIN_LED_URGENCE 2
-#define EMERGENCY_TEMP 29
+#define EMERGENCY_TEMP 15
 
 #define KP 2
 #define KI 5

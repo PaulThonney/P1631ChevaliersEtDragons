@@ -26,11 +26,11 @@
 #define CONTACT_DEFAULT_MODE 0 //Valueur par defaut => 0: Tracking, 1: Rainbow, 2:AnimShield, 3: BlinkAll(RED)
 
 //BUTTONS
-#define BUFFER_SIZE 8
+#define BUFFER_SIZE 9
 #define JOYSTICK_MARGIN 0.02f
 
 //MANETTE STATES
-#define CONNECTED 1
+#define CONNECTED 255
 
 #define EASY 0
 #define MEDIUM 1
@@ -734,8 +734,7 @@ float TriggerValue(byte v) {
    @return byte
 */
 byte InfoController() {
-  return 1;
-  //return dataBuffer[8];
+  return dataBuffer[8];
 }
 
 /*
