@@ -56,7 +56,7 @@ void setup() {
 
 void loop() {
   if (millis() > watchTimes + WATCHTIMES_TIMEOUT) {
-    Serial.println("TIME OUT");
+    //Serial.println("TIME OUT");
     needToTrack = false;
   }
   tracking();
@@ -139,6 +139,7 @@ void tracking() {
 
 void receiveEvent(int howMany) {
   if (howMany == 0) {
+    Serial.println("PING");
     watchTimes = millis();
     return;
   }

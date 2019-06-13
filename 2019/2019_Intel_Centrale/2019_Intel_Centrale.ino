@@ -87,8 +87,8 @@ unsigned long lastContactAt = 0;
 unsigned long askResponseAt = 0;
 unsigned long lastPingAt = 0;
 bool waitingResponse = false;
-int nbRequest;
-int nbTransmission;
+unsigned long nbRequest;
+unsigned long nbTransmission;
 long loopTime;
 
 bool sendEyes(int id, int data = -1);
@@ -179,7 +179,7 @@ void loop() {
 void setupRobot() {
   currentLife = MAX_LIFE;
   hurtCooldown = 0;
-  sendTracking(0x2E);
+  //sendTracking(0x2E);
   sendEyes(0);
   sendContact(CONTACT_DEFAULT_MODE);
   sendSound(250);//StopSound
@@ -239,7 +239,7 @@ void loopHurt() {
     return;
   }
   lastContactAt = millis();
-  byte buffer[2];
+  byte buffer[10];
   if (getData(ADDR_CONTACT, buffer, 2)) {
     if ((bool)buffer[0] == true) {
       int dmg = 0;
@@ -361,7 +361,7 @@ void loopAutomatique() {
 
   if (millis() - lastUpdateHead >  25) { //demande à la pixy ces valeurs toutes les 25ms
 
-    byte buffer[3];
+    byte buffer[10];
     if (getData(ADDR_TRACKING, buffer, 3)) {
       headAngle = map(buffer[0], 0, 180, -90, 90);
       targetDistance = buffer[3];
