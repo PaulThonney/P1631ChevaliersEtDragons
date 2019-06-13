@@ -19,6 +19,7 @@ Servo servo; // donne un nom de Servomoteur
 #define VITESSE_ROTATION_RECHERCHE 250
 #define TEMPS_ATTENTE_RECHERCHE 250
 
+long unsigned watchTimes = 0;
 long unsigned lastTimeViewObject = 0;
 bool isTracking = false;
 bool sensBalayage;
