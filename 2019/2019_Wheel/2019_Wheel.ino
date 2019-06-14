@@ -124,6 +124,10 @@ void checkRPM(int dur) {
       RPM[i][0] = 0;
       //Serial.println("RPM (" + String(i) + ") : " + String(RPM[i][1]) + ", " + String(getSpeed(i)) + " m/s");
       //Serial.println("RPM (" + String(i) + ") : " + String(RPM[i][0])+", "+String(RPM[i][1])+", "+String(RPM[i][2])+ ", " + String(getSpeed(i)) + " m/s");
+
+stateMotors[i][0] = mapfloat(RPM[i][1], 0, 600, 0, 100); //Input RPM => 0-MAXRPM en 0-100
+  pid[i].Compute();
+
     }
     prevtime = currtime;
   }
@@ -187,9 +191,6 @@ void Motor(byte id) {
   int pinSensor = pinMotors[id][3];
 
   Serial.println("PID (" + String(RPM[id][1]) + ") : Input:" + String(stateMotors[id][0]) + ", Output:" + String(stateMotors[id][1]) + ", Setpoint:" + String(stateMotors[id][2]) + ", Value:" + String(stateMotors[id][3]) + ", ");
-  
-  stateMotors[id][0] = mapfloat(RPM[id][1], 0, 600, 0, 100); //Input RPM => 0-MAXRPM en 0-100
-  pid[id].Compute();
 
 
   if (false) {
