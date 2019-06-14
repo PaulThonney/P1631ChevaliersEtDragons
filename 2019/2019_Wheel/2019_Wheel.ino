@@ -5,7 +5,7 @@
 
 #define ADDR_WHEEL 0x13
 
-#define USE_PID false
+#define USE_PID true
 
 #define WATCHTIMES_TIMEOUT 2500
 
@@ -16,12 +16,12 @@
 #define PWM_OUTPUT_MOTOR_L 4 // Pin 5 où sort le pwm du moteur 2
 #define INPUT_4_MOTOR_L    3  // Pin 9 pour un sens
 #define INPUT_3_MOTOR_L    9  // Pin 3 pour l'autre sens
-#define CAPTOR_MOTOR_L    A0
+#define CAPTOR_MOTOR_L    A1
 
 #define PWM_OUTPUT_MOTOR_R 7 // Pin 6 où sort le pwm du moteur 1
 #define INPUT_2_MOTOR_R    10  // Pin 10 pour un sens
 #define INPUT_1_MOTOR_R    11  // Pin 11 pour l'autre sens
-#define CAPTOR_MOTOR_R    A1
+#define CAPTOR_MOTOR_R    A0
 
 #define PIN_TEMP_R  A2
 #define PIN_TEMP_L  A3
@@ -30,9 +30,9 @@
 #define PIN_LED_URGENCE 2
 #define EMERGENCY_TEMP 35
 
-#define KP 2
-#define KI 5
-#define KD 1
+#define KP 1
+#define KI 0
+#define KD 0
 
 bool tempOverheating[2];
 
@@ -91,6 +91,10 @@ void setup() {
   pinMode (4, INPUT);//désactivation de pin
   pinMode (5, INPUT);//désactivation de pin
 
+
+  pinMode(CAPTOR_MOTOR_R, INPUT);
+  pinMode(CAPTOR_MOTOR_L, INPUT);
+
   //PID
   for (int i = 0; i < NB_MOTORS; i++) {
     pid[i].SetOutputLimits(0, 100);
@@ -99,7 +103,9 @@ void setup() {
 }
 
 void checkRPM(int dur) {
+  //Serial.println(String(digitalRead(CAPTOR_MOTOR_R)) + "," + String(digitalRead(CAPTOR_MOTOR_L)));
   for (int i = 0; i < NB_MOTORS; i++) {
+
     bool sensorValue = digitalRead(pinMotors[i][3]);
     if (sensorValue && !previousSensorValue[i]) {
       RPM[i][0]++;
@@ -117,6 +123,7 @@ void checkRPM(int dur) {
       }
       RPM[i][0] = 0;
       //Serial.println("RPM (" + String(i) + ") : " + String(RPM[i][1]) + ", " + String(getSpeed(i)) + " m/s");
+      //Serial.println("RPM (" + String(i) + ") : " + String(RPM[i][0])+", "+String(RPM[i][1])+", "+String(RPM[i][2])+ ", " + String(getSpeed(i)) + " m/s");
     }
     prevtime = currtime;
   }
@@ -153,7 +160,7 @@ void checkTemp() {
 
 
   //DEBUG
-  if (true) {
+  if (false) {
     Serial.println("==TEMPERATURE==");
     Serial.println("Temp Right: " + String(tempR) + "°C");
     Serial.println("Temp Left: " + String(tempL) + "°C");
@@ -168,6 +175,9 @@ bool setMotorValue(byte id, int value) {
   stateMotors[id][2] = abs(value);//Setpoint
   return true;
 }
+float mapfloat(float x, float in_min, float in_max, float out_min, float out_max) {
+  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
 
 void Motor(byte id) {
   double value = stateMotors[id][3];
@@ -176,7 +186,9 @@ void Motor(byte id) {
   int pinPWM = pinMotors[id][2];
   int pinSensor = pinMotors[id][3];
 
-  stateMotors[id][0] = map(RPM[id][1], 0, RPM[id][2], 0, 100); //Input RPM => 0-MAXRPM en 0-100
+  Serial.println("PID (" + String(RPM[id][1]) + ") : Input:" + String(stateMotors[id][0]) + ", Output:" + String(stateMotors[id][1]) + ", Setpoint:" + String(stateMotors[id][2]) + ", Value:" + String(stateMotors[id][3]) + ", ");
+  
+  stateMotors[id][0] = mapfloat(RPM[id][1], 0, 600, 0, 100); //Input RPM => 0-MAXRPM en 0-100
   pid[id].Compute();
 
 
@@ -208,7 +220,7 @@ void Motor(byte id) {
 }
 
 void loopMotors() {
-  checkRPM(25);//check rpm every 25ms
+  checkRPM(250);//check rpm every 25ms
   Motor(0);
   Motor(1);
 }

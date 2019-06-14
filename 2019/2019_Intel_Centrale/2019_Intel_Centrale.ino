@@ -96,7 +96,7 @@ bool sendContact(int id, int data = -1, int duration = -1);
 
 // maxSpeed[%] - hurtCooldown[ms]
 int difficulty[][2] = {
-  {40, 500},//easy
+  {30, 500},//easy
   {75, 2500},//medium
   {100, 1000}//hard
 };
@@ -356,6 +356,7 @@ void loopAutomatique() {
 
   if (isDead()) {
     setState(State::MenuSelection);
+    return;
   }
 
   if (millis() - lastUpdateHead >  25) { //demande à la pixy ces valeurs toutes les 25ms
