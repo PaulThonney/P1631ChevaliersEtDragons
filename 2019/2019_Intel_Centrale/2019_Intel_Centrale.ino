@@ -1,4 +1,3 @@
-
 /* Code de l'Arduino gérant l'intelligence centrale du Minotaure
   Son but est de récolter toutes les informations des capteurs et de prendre des décisions en conséquence
   @author: Dany VALADO (2018) Lucien PRUVOT Paul THONNEY
