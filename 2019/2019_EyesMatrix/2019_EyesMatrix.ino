@@ -622,7 +622,9 @@ void textAnim(String text, int color, int dur) {
     matrix[matrix0].print(textChar);
     matrix[matrix0].writeDisplay();
     decalage--;
-    if (decalage <= -strlen(textChar) * 10)
+    int lengthText = strlen(textChar);
+    Serial.println(lengthText);
+    if (decalage <= lengthText * -7)
       decalage = 7;
 
   }
@@ -772,7 +774,7 @@ void loop() {
     case 5: controlledEyeAnim(); break;
     case 6: angryAnim(); break;
     case 7: textAnim("LOST CONNECTION", LED_RED); break;
-    case 8: textAnim("CONNECTED", LED_GREEN, 1000); break;
+    case 8: textAnim("CONNECTED", LED_GREEN, 6000); break;
     case 9: loveAnim(); break;
   }
 }
