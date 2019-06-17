@@ -28,7 +28,7 @@
 #define PIN_VENT_R  12
 #define PIN_VENT_L  8
 #define PIN_LED_URGENCE 2
-#define EMERGENCY_TEMP 35
+#define EMERGENCY_TEMP 40
 
 #define KP 1
 #define KI 0
@@ -121,12 +121,14 @@ void checkRPM(int dur) {
       if (RPM[i][1] > RPM[i][2]) {
         RPM[i][2] = RPM[i][1];//MAX RPM
       }
+
+      stateMotors[i][0] = (double)mapfloat(RPM[i][1], 0, 800, 0, 100); //Input RPM => 0-MAXRPM en 0-100
+      pid[i].Compute();
+      Serial.println("PID (" + String(RPM[i][1]) + ") : Input:" + String(stateMotors[i][0]) + ", Output:" + String(stateMotors[i][1]) + ", Setpoint:" + String(stateMotors[i][2]) + ", Value:" + String(stateMotors[i][3]) + ", ");
+
       RPM[i][0] = 0;
       //Serial.println("RPM (" + String(i) + ") : " + String(RPM[i][1]) + ", " + String(getSpeed(i)) + " m/s");
       //Serial.println("RPM (" + String(i) + ") : " + String(RPM[i][0])+", "+String(RPM[i][1])+", "+String(RPM[i][2])+ ", " + String(getSpeed(i)) + " m/s");
-
-stateMotors[i][0] = mapfloat(RPM[i][1], 0, 600, 0, 100); //Input RPM => 0-MAXRPM en 0-100
-  pid[i].Compute();
 
     }
     prevtime = currtime;
@@ -190,8 +192,7 @@ void Motor(byte id) {
   int pinPWM = pinMotors[id][2];
   int pinSensor = pinMotors[id][3];
 
-  Serial.println("PID (" + String(RPM[id][1]) + ") : Input:" + String(stateMotors[id][0]) + ", Output:" + String(stateMotors[id][1]) + ", Setpoint:" + String(stateMotors[id][2]) + ", Value:" + String(stateMotors[id][3]) + ", ");
-
+  
 
   if (false) {
     Serial.println("==MOTOR==");
@@ -221,7 +222,7 @@ void Motor(byte id) {
 }
 
 void loopMotors() {
-  checkRPM(250);//check rpm every 25ms
+  checkRPM(150);//check rpm every 25ms
   Motor(0);
   Motor(1);
 }
