@@ -132,7 +132,7 @@ void setup() {
 
 void loop() {
   timeStartAt = millis();
-  //communicationController(); // On commence par communiquer les dernières infos avec la manette
+  communicationController(); // On commence par communiquer les dernières infos avec la manette
   pingModules();
   loopAmbiant();
   if (millis() > askResponseAt + 25) {
