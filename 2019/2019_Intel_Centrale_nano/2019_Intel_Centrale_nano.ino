@@ -96,8 +96,8 @@ bool sendContact(int id, int data = -1, int duration = -1);
 
 // maxSpeed[%] - hurtCooldown[ms]
 int difficulty[][2] = {
-  {30, 500},//easy
-  {75, 2500},//medium
+  {60, 4000},//easy
+  {80, 2500},//medium
   {100, 1000}//hard
 };
 int currentDifficulty = 0;
@@ -209,7 +209,7 @@ bool hurt(int dmg) {
   hurtCooldown = millis() + cooldownDuration;
   currentLife -= dmg;
   //Serial.println(String(dmg) + " dmg");
- // Serial.println(String(currentLife) + " lives");
+  // Serial.println(String(currentLife) + " lives");
   if (currentLife <= 0) {//DEAD
     currentLife = 0;
     die();
@@ -241,7 +241,7 @@ void loopHurt() {
   if (getData(ADDR_CONTACT, buffer, 2)) {
     if ((bool)buffer[0] == true) {
       int dmg = 0;
-     // Serial.println("Which Contact:" + String(buffer[1]));
+      // Serial.println("Which Contact:" + String(buffer[1]));
       switch (buffer[1]) {
         case 0: dmg = 1; break;
         case 1: dmg = 1; break;
@@ -263,7 +263,7 @@ void pingModules() {
   for (int i = 0; i < sizeof(modules) / sizeof(modules[0]); i++) {
     bool state = pingAddr(modules[i]);
     if (state != stateModules[i]) {
-     // Serial.println("Module " + String(i) + " " + String((state ? "CONNECTED" : "DISCONNECTED")));
+      // Serial.println("Module " + String(i) + " " + String((state ? "CONNECTED" : "DISCONNECTED")));
       sendSound(0, state ? 1 : 2);
     }
     stateModules[i] = state;
@@ -354,6 +354,9 @@ void loopAutomatique() {
   loopHurt();
 
   if (isDead()) {
+
+    sendMotorValue(0, 0);
+    sendMotorValue(1, 0);
     setState(State::MenuSelection);
     return;
   }
@@ -380,13 +383,18 @@ void loopAutomatique() {
     }
 
   } else {
-    int speed = getSpeed(map(abs(headAngle), 0, 90, 10, getDifficulty(MAX_SPEED)/2));
-    if (headAngle < 0) {
-      sendMotorValue(0, -speed);
-      sendMotorValue(1, speed);
+    int speed = 20;
+    if (abs(headAngle) > 50) {
+      if (headAngle < 0) {
+        sendMotorValue(0, -speed);
+        sendMotorValue(1, speed);
+      } else {
+        sendMotorValue(0, speed);
+        sendMotorValue(1, -speed);
+      }
     } else {
-      sendMotorValue(0, speed);
-      sendMotorValue(1, -speed);
+      sendMotorValue(0, 0);
+      sendMotorValue(1, 0);
     }
   }
   controllerOutput = 26;
@@ -411,6 +419,8 @@ void loopManuel() {
 
   if (isDead()) {
     setState(State::MenuSelection);
+    sendMotorValue(0, 0);
+    sendMotorValue(1, 0);
   }
 
 
@@ -691,25 +701,25 @@ void logs() {
     return;
   }
   lastLogAt = millis();
- /* Serial.println("======LOGS======");
-  Serial.println("Execute Time: " + String(millis() / 1000.0) + "s");
-  Serial.println("nbTransmission: " + String(nbTransmission));
-  Serial.println("nbRequest: " + String(nbRequest));
-  Serial.println("loopTime: " + String(loopTime) + "ms");
-  Serial.println("currentState: " + String(currentState));
-  Serial.println("headAngle: " + String(headAngle));
-  Serial.println("targetDistance: " + String(targetDistance));
-  Serial.println("isFindTarget: " + String(isFindTarget));
-  Serial.println("currentDifficulty: " + String(currentDifficulty));
-  Serial.println("currentMotorValue 1: " + String(currentMotorValue[0]) + "%");
-  Serial.println("currentMotorValue 2: " + String(currentMotorValue[1]) + "%");
-  Serial.println("Module Tracking (" + toHex(modules[0]) + "): " + String((stateModules[0] ? "CONNECTED" : "DISCONNECTED")));
-  Serial.println("Module Contact (" + toHex(modules[1]) + "): " + String((stateModules[1] ? "CONNECTED" : "DISCONNECTED")));
-  Serial.println("Module Sound (" + toHex(modules[2]) + "): " + String((stateModules[2] ? "CONNECTED" : "DISCONNECTED")));
-  Serial.println("Module Wheel (" + toHex(modules[3]) + "): " + String((stateModules[3] ? "CONNECTED" : "DISCONNECTED")));
-  Serial.println("Module Eyes (" + toHex(modules[4]) + "): " + String((stateModules[4] ? "CONNECTED" : "DISCONNECTED")));
-  Serial.println("================");
-  Serial.println();
+  /* Serial.println("======LOGS======");
+    Serial.println("Execute Time: " + String(millis() / 1000.0) + "s");
+    Serial.println("nbTransmission: " + String(nbTransmission));
+    Serial.println("nbRequest: " + String(nbRequest));
+    Serial.println("loopTime: " + String(loopTime) + "ms");
+    Serial.println("currentState: " + String(currentState));
+    Serial.println("headAngle: " + String(headAngle));
+    Serial.println("targetDistance: " + String(targetDistance));
+    Serial.println("isFindTarget: " + String(isFindTarget));
+    Serial.println("currentDifficulty: " + String(currentDifficulty));
+    Serial.println("currentMotorValue 1: " + String(currentMotorValue[0]) + "%");
+    Serial.println("currentMotorValue 2: " + String(currentMotorValue[1]) + "%");
+    Serial.println("Module Tracking (" + toHex(modules[0]) + "): " + String((stateModules[0] ? "CONNECTED" : "DISCONNECTED")));
+    Serial.println("Module Contact (" + toHex(modules[1]) + "): " + String((stateModules[1] ? "CONNECTED" : "DISCONNECTED")));
+    Serial.println("Module Sound (" + toHex(modules[2]) + "): " + String((stateModules[2] ? "CONNECTED" : "DISCONNECTED")));
+    Serial.println("Module Wheel (" + toHex(modules[3]) + "): " + String((stateModules[3] ? "CONNECTED" : "DISCONNECTED")));
+    Serial.println("Module Eyes (" + toHex(modules[4]) + "): " + String((stateModules[4] ? "CONNECTED" : "DISCONNECTED")));
+    Serial.println("================");
+    Serial.println();
   */
 }
 
