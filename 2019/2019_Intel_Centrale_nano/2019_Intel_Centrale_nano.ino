@@ -76,7 +76,7 @@ typedef enum State { // On définit les états possible de la machine
 
 State setState(State state, int menuPos = -1);
 State savedMode = State::Manuel;
-State currentState = State::Automatique; // On démarre sur le menu de sélection
+State currentState = State::MenuSelection; // On démarre sur le menu de sélection
 State previousState; // Ancien état
 
 bool isStartedState = false;
@@ -375,12 +375,12 @@ void loopAutomatique() {
   if (headAngle > -5 && headAngle < 5) {
     if (isFindTarget) {
       int speed = getSpeed(map(targetDistance, 0, 255, 10, getDifficulty(MAX_SPEED)));
-      sendMotorValue(0, speed);
-      sendMotorValue(1, speed);
+      sendMotorValue(0, -speed);
+      sendMotorValue(1, -speed);
     }
 
   } else {
-    int speed = getSpeed(map(abs(headAngle), 0, 90, 10, getDifficulty(MAX_SPEED)/10));
+    int speed = getSpeed(map(abs(headAngle), 0, 90, 10, getDifficulty(MAX_SPEED)/2));
     if (headAngle < 0) {
       sendMotorValue(0, -speed);
       sendMotorValue(1, speed);
