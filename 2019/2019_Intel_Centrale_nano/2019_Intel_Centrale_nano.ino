@@ -376,7 +376,7 @@ void loopAutomatique() {
     //sendEyes(5, (3 << 3) | map(headAngle, -90, 90, 0, 6));
   }
 
-  if (headAngle > -5 && headAngle < 5) {
+  if (headAngle > -30 && headAngle < 30) {
     if (isFindTarget) {
       int speed = getSpeed(map(targetDistance, 0, 255, 20, getDifficulty(MAX_SPEED)));
       //int speed = 20;
