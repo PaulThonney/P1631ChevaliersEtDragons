@@ -124,7 +124,7 @@ void checkRPM(int dur) {
 
       stateMotors[i][0] = (double)mapfloat(RPM[i][1], 0, 800, 0, 100); //Input RPM => 0-MAXRPM en 0-100
       pid[i].Compute();
-      Serial.println("PID (" + String(RPM[i][1]) + ") : Input:" + String(stateMotors[i][0]) + ", Output:" + String(stateMotors[i][1]) + ", Setpoint:" + String(stateMotors[i][2]) + ", Value:" + String(stateMotors[i][3]) + ", ");
+      //Serial.println("PID (" + String(RPM[i][1]) + ") : Input:" + String(stateMotors[i][0]) + ", Output:" + String(stateMotors[i][1]) + ", Setpoint:" + String(stateMotors[i][2]) + ", Value:" + String(stateMotors[i][3]) + ", ");
 
       RPM[i][0] = 0;
       //Serial.println("RPM (" + String(i) + ") : " + String(RPM[i][1]) + ", " + String(getSpeed(i)) + " m/s");
@@ -192,7 +192,7 @@ void Motor(byte id) {
   int pinPWM = pinMotors[id][2];
   int pinSensor = pinMotors[id][3];
 
-  
+
 
   if (false) {
     Serial.println("==MOTOR==");
@@ -213,6 +213,10 @@ void Motor(byte id) {
 
   digitalWrite(pinPontH1, (value < 0) ? LOW : HIGH);
   digitalWrite(pinPontH2, (value < 0) ? HIGH : LOW);
+   Serial.println("value: " + String(value));
+  Serial.println("pinPontH1: " + String((value < 0) ? LOW : HIGH));
+  Serial.println("pinPontH2: " + String((value < 0) ? HIGH : LOW));
+
 
   if (USE_PID) {
     SoftPWMSetPercent(pinPWM, stateMotors[id][1]);//OUTPUT

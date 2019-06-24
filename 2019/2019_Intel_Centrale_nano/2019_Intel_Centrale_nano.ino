@@ -382,8 +382,8 @@ void loopAutomatique() {
   } else {
     int speed = getSpeed(map(abs(headAngle), 0, 90, 10, getDifficulty(MAX_SPEED)));
     if (headAngle < 0) {
-      sendMotorValue(0, speed);
-      sendMotorValue(1, -speed);
+      sendMotorValue(0, -speed);
+      sendMotorValue(1, speed);
     } else {
       sendMotorValue(0, speed);
       sendMotorValue(1, -speed);
@@ -505,7 +505,7 @@ bool sendMotorValue(byte id, int value) {
    @return void
 */
 void communicationController() {
-  uint8_t dataBufferWrite[2] = {controllerOutput, (byte)(controllerBuzzer << 4 | controllerVibrator)}; // réenvoie les données à la manette
+  byte dataBufferWrite[2] = {controllerOutput, (byte)((controllerBuzzer << 4) | controllerVibrator)}; // réenvoie les données à la manette
   Serial.write(dataBufferWrite, 2);
   // controlle la longueure de la tramme
   while (Serial.available() < BUFFER_SIZE) {}
