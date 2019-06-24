@@ -186,7 +186,7 @@ void setupRobot() {
 int boostSpeed() {
   int percent = 0;
   if (isCooldown()) {
-    percent += 50;
+    percent += 25;
   }
   return percent;
 }
@@ -373,7 +373,7 @@ void loopAutomatique() {
       waitingResponse = false;
       lastUpdateHead = millis();
     }
-    //sendEyes(5, (3 << 3) | map(headAngle, -90, 90, 0, 6));
+    //sendEyes(5, (3 << 3) | map(headAngle, -90, 90, 0, 5));
   }
 
   if (headAngle > -30 && headAngle < 30) {
@@ -385,7 +385,7 @@ void loopAutomatique() {
     }
 
   } else {
-     int speed = getSpeed(map(abs(headAngle), 0, 90, 20, (int) (getDifficulty(MAX_SPEED)/2.5)));
+     int speed = getSpeed(map(abs(headAngle), 0, 90, 10, (int) (getDifficulty(MAX_SPEED)/2.5)));
       if (headAngle < 0) {
         sendMotorValue(0, -speed);
         sendMotorValue(1, speed);
