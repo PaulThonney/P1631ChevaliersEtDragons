@@ -144,6 +144,10 @@ void loop() {
 }
 
 void checkContact() {
+  if (animMode == 3) {
+    getHit = false;
+    return;
+  }
   int16_t newContact[MATRIX_NUMBER] = {
     digitalRead(CONTACT0_PIN),
     digitalRead(CONTACT1_PIN),
@@ -159,7 +163,7 @@ void checkContact() {
         getHit = true;
         lastHitZone = i;
       }
-      
+
       Serial.println("contact");
     }
     oldContact[i] = newContact[i];

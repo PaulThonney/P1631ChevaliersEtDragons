@@ -22,7 +22,7 @@
 //DEFINE ROBOT
 
 #define MAX_LIFE 6
-#define CONTACT_DEFAULT_MODE 0 //Valueur par defaut => 0: Tracking, 1: Rainbow, 2:AnimShield, 3: BlinkAll(RED)
+#define CONTACT_DEFAULT_MODE 1 //Valueur par defaut => 0: Tracking, 1: Rainbow, 2:AnimShield, 3: BlinkAll(RED)
 
 //BUTTONS
 #define BUFFER_SIZE 9
@@ -233,7 +233,7 @@ bool isDead() {
 
 
 void loopHurt() {
-  if (millis() <= lastContactAt + 1000) {
+  if (millis() <= lastContactAt + 250) {
     return;
   }
   lastContactAt = millis();
@@ -271,14 +271,14 @@ void pingModules() {
 }
 
 bool pingAddr(int addr) {
-  if (waitingResponse)return false;
+ // if (waitingResponse)return false;
   nbTransmission++;
   Wire.beginTransmission(addr);
   return Wire.endTransmission() == 0;
 }
 
 bool getData(int addr, byte *buffer, int nbBytes) {
-  if (waitingResponse)return false;
+ // if (waitingResponse)return false;
   if (!pingAddr(addr))return false;
   nbRequest++;
   waitingResponse = true;
@@ -297,7 +297,7 @@ bool getData(int addr, byte *buffer, int nbBytes) {
 }
 
 bool sendData(int addr, byte *buffer, int nbBytes) {
-  if (waitingResponse)return false;
+//  if (waitingResponse)return false;
   nbTransmission++;
   Wire.beginTransmission(addr);
   for (int i = 0; i < nbBytes; i++) {
@@ -358,6 +358,7 @@ void loopAutomatique() {
     sendMotorValue(0, 0);
     sendMotorValue(1, 0);
     setState(State::MenuSelection);
+      setupRobot();
     return;
   }
 
@@ -377,26 +378,22 @@ void loopAutomatique() {
 
   if (headAngle > -5 && headAngle < 5) {
     if (isFindTarget) {
-      int speed = getSpeed(map(targetDistance, 0, 255, 10, getDifficulty(MAX_SPEED)));
+      int speed = getSpeed(map(targetDistance, 0, 255, 20, getDifficulty(MAX_SPEED)));
+      //int speed = 20;
       sendMotorValue(0, -speed);
       sendMotorValue(1, -speed);
     }
 
   } else {
-    int speed = 20;
-    if (abs(headAngle) > 50) {
+     int speed = getSpeed(map(abs(headAngle), 0, 90, 20, (int) (getDifficulty(MAX_SPEED)/2.5)));
       if (headAngle < 0) {
         sendMotorValue(0, -speed);
         sendMotorValue(1, speed);
       } else {
         sendMotorValue(0, speed);
         sendMotorValue(1, -speed);
-      }
-    } else {
-      sendMotorValue(0, 0);
-      sendMotorValue(1, 0);
-    }
-  }
+      } 
+    }  
   controllerOutput = 26;
 }
 
@@ -421,6 +418,8 @@ void loopManuel() {
     setState(State::MenuSelection);
     sendMotorValue(0, 0);
     sendMotorValue(1, 0);
+      setupRobot();
+    return;
   }
 
 
@@ -435,7 +434,7 @@ void loopManuel() {
   int speed2 = getDifficulty(MAX_SPEED) * hyp;
 
   if (jX < 0) {
-    speed1 *= -(1 - abs(jX));
+    speed1 *= (1 - abs(jX));
   }
   if (jX > 0) {
     speed2 *= (1 - abs(jX));
@@ -446,7 +445,8 @@ void loopManuel() {
 }
 
 bool sendSound(int id, int data) {
-  if (waitingResponse || !stateModules[2])return false;
+  //if (waitingResponse || !stateModules[2])return false;
+  if (!stateModules[2])return false;
   nbTransmission++;
   Wire.beginTransmission(ADDR_SOUND);
   Wire.write(id);
@@ -458,7 +458,8 @@ bool sendSound(int id, int data) {
 }
 
 bool sendContact(int id, int data, int duration) {
-  if (waitingResponse || !stateModules[1])return false;
+ // if (waitingResponse || !stateModules[1])return false;
+ if (!stateModules[1])return false;
   nbTransmission++;
   Wire.beginTransmission(ADDR_CONTACT);
   Wire.write(id);
@@ -473,7 +474,8 @@ bool sendContact(int id, int data, int duration) {
 }
 
 bool sendTracking(int id) {
-  if (waitingResponse || !stateModules[0])return false;
+ //  if (waitingResponse || !stateModules[0])return false;
+  if (!stateModules[0])return false;
   nbTransmission++;
   Wire.beginTransmission(ADDR_TRACKING);
   Wire.write(id);
@@ -482,7 +484,8 @@ bool sendTracking(int id) {
 }
 
 bool sendEyes(int id, int data) {
-  if (waitingResponse || !stateModules[4])return false;
+//  if (waitingResponse || !stateModules[4])return false;
+  if (!stateModules[4])return false;
   nbTransmission++;
   Wire.beginTransmission(ADDR_EYES);
   Wire.write(id);
@@ -627,6 +630,7 @@ void loopPauseGenerale() {
       if (ButtonA(true)) {
         resumeGame();
         setState(State::MenuSelection);
+        setupRobot();       
       }
       break;
   }

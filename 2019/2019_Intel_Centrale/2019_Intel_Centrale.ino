@@ -76,7 +76,7 @@ typedef enum State { // On définit les états possible de la machine
 
 State setState(State state, int menuPos = -1);
 State savedMode = State::Manuel;
-State currentState = State::Automatique; // On démarre sur le menu de sélection
+State currentState = State::MenuSelection; // On démarre sur le menu de sélection
 State previousState; // Ancien état
 
 bool isStartedState = false;
@@ -96,8 +96,8 @@ bool sendContact(int id, int data = -1, int duration = -1);
 
 // maxSpeed[%] - hurtCooldown[ms]
 int difficulty[][2] = {
-  {30, 500},//easy
-  {75, 2500},//medium
+  {60, 4000},//easy
+  {80, 2500},//medium
   {100, 1000}//hard
 };
 int currentDifficulty = 0;
@@ -356,6 +356,8 @@ void loopAutomatique() {
 
   if (isDead()) {
     setState(State::MenuSelection);
+    sendMotorValue(0, 0);
+    sendMotorValue(1, 0);
     return;
   }
 
@@ -381,10 +383,10 @@ void loopAutomatique() {
     }
 
   } else {
-    int speed = getSpeed(map(abs(headAngle), 0, 90, 10, getDifficulty(MAX_SPEED)));
+    int speed = getSpeed(map(abs(headAngle), 0, 90, 10, getDifficulty(MAX_SPEED) / 2));
     if (headAngle < 0) {
-      sendMotorValue(0, speed);
-      sendMotorValue(1, -speed);
+      sendMotorValue(0, -speed);
+      sendMotorValue(1, speed);
     } else {
       sendMotorValue(0, speed);
       sendMotorValue(1, -speed);
@@ -412,6 +414,9 @@ void loopManuel() {
 
   if (isDead()) {
     setState(State::MenuSelection);
+    sendMotorValue(0, 0);
+    sendMotorValue(1, 0);
+    return;
   }
 
 
@@ -506,7 +511,7 @@ bool sendMotorValue(byte id, int value) {
    @return void
 */
 void communicationController() {
-  uint8_t dataBufferWrite[2] = {controllerOutput, (byte)(controllerBuzzer << 4 | controllerVibrator)}; // réenvoie les données à la manette
+  byte dataBufferWrite[2] = {controllerOutput, (byte)(controllerBuzzer << 4 | controllerVibrator)}; // réenvoie les données à la manette
   Serial2.write(dataBufferWrite, 2);
   // controlle la longueure de la tramme
   while (Serial2.available() < BUFFER_SIZE) {}
