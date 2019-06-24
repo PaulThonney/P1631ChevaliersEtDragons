@@ -380,7 +380,7 @@ void loopAutomatique() {
     }
 
   } else {
-    int speed = getSpeed(map(abs(headAngle), 0, 90, 10, getDifficulty(MAX_SPEED)));
+    int speed = getSpeed(map(abs(headAngle), 0, 90, 10, getDifficulty(MAX_SPEED)/10));
     if (headAngle < 0) {
       sendMotorValue(0, -speed);
       sendMotorValue(1, speed);
@@ -425,7 +425,7 @@ void loopManuel() {
   int speed2 = getDifficulty(MAX_SPEED) * hyp;
 
   if (jX < 0) {
-    speed1 *= (1 - abs(jX));
+    speed1 *= -(1 - abs(jX));
   }
   if (jX > 0) {
     speed2 *= (1 - abs(jX));
