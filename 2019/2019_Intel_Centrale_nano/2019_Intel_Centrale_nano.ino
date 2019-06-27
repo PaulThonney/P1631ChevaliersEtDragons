@@ -271,14 +271,14 @@ void pingModules() {
 }
 
 bool pingAddr(int addr) {
- // if (waitingResponse)return false;
+  // if (waitingResponse)return false;
   nbTransmission++;
   Wire.beginTransmission(addr);
   return Wire.endTransmission() == 0;
 }
 
 bool getData(int addr, byte *buffer, int nbBytes) {
- // if (waitingResponse)return false;
+  // if (waitingResponse)return false;
   if (!pingAddr(addr))return false;
   nbRequest++;
   waitingResponse = true;
@@ -297,7 +297,7 @@ bool getData(int addr, byte *buffer, int nbBytes) {
 }
 
 bool sendData(int addr, byte *buffer, int nbBytes) {
-//  if (waitingResponse)return false;
+  //  if (waitingResponse)return false;
   nbTransmission++;
   Wire.beginTransmission(addr);
   for (int i = 0; i < nbBytes; i++) {
@@ -358,7 +358,7 @@ void loopAutomatique() {
     sendMotorValue(0, 0);
     sendMotorValue(1, 0);
     setState(State::MenuSelection);
-      setupRobot();
+    setupRobot();
     return;
   }
 
@@ -385,15 +385,15 @@ void loopAutomatique() {
     }
 
   } else {
-     int speed = getSpeed(map(abs(headAngle), 0, 90, 10, (int) (getDifficulty(MAX_SPEED)/2.5)));
-      if (headAngle < 0) {
-        sendMotorValue(0, -speed);
-        sendMotorValue(1, speed);
-      } else {
-        sendMotorValue(0, speed);
-        sendMotorValue(1, -speed);
-      } 
-    }  
+    int speed = getSpeed(map(abs(headAngle), 0, 90, 10, (int) (getDifficulty(MAX_SPEED) / 2.5)));
+    if (headAngle < 0) {
+      sendMotorValue(0, -speed);
+      sendMotorValue(1, speed);
+    } else {
+      sendMotorValue(0, speed);
+      sendMotorValue(1, -speed);
+    }
+  }
   controllerOutput = 26;
 }
 
@@ -418,30 +418,98 @@ void loopManuel() {
     setState(State::MenuSelection);
     sendMotorValue(0, 0);
     sendMotorValue(1, 0);
-      setupRobot();
+    setupRobot();
     return;
   }
 
 
   controllerOutput = 27;
 
-  float jX = JoystickValue(AxisLX());
-  float jY = JoystickValue(AxisLY());
+  //Récupère les infos
+  int jX = (JoystickValue(AxisLX())*100);
+  int jY =  (JoystickValue(AxisLY())*100);
 
-  float hyp = sqrt(jX * jX + jY * jY);
+  //Viteese des roues (De base à l'arrêt)
+  short speedL = 0;
+  short speedR = 0;
 
-  int speed1 = getDifficulty(MAX_SPEED) * hyp;
-  int speed2 = getDifficulty(MAX_SPEED) * hyp;
+  // Sens du moteur
+  bool forward = true;
 
-  if (jX < 0) {
-    speed1 *= (1 - abs(jX));
+  /*
+    float hyp = sqrt(jX * jX + jY * jY);
+
+
+    int speed1 = getDifficulty(MAX_SPEED) * hyp;
+    int speed2 = getDifficulty(MAX_SPEED) * hyp;
+
+    if (jX < 0) {
+    speed1 *= -1*(1 - abs(jX));
+    }else if (jX > 0) {
+    speed2 *= -1*(1 - abs(jX));
+    }
+
+    if(jY < 0){
+    speed1 *= -1;
+    speed2 *= -1;
+    }
+
+    sendMotorValue(0, getSpeed(speed1));
+    sendMotorValue(1, getSpeed(speed2));
+  */
+
+ if(jY > 10){
+  if(jX < -10){
+    speedR = 100+jX; 
+    speedL = -jX;
+  }else if(jX > 10){
+    speedR = jX;
+    speedL = 100-jX;
+  }else{
+    speedR = jY;
+    speedL = jY;
   }
-  if (jX > 0) {
-    speed2 *= (1 - abs(jX));
+ } else if(jY < -10){
+  if(jX < -10){
+    speedR = -1*((100+jX)); 
+    speedL = jX;
+  }else if(jX > 10){
+    speedR = -jX;
+    speedL = -100+jX;
+  }else{
+    speedR = jY;
+    speedL = jY;
   }
+ }else{
+  if(jX < -10){
+    speedR = 100+jX; 
+    speedL = -jX;
+  }else if(jX > 10){
+    speedR = jX;
+    speedL = 100-jX;
+  }else{
+    speedR = 0;
+    speedL = 0;
+  }
+ }
 
-  sendMotorValue(0, getSpeed(speed1));
-  sendMotorValue(1, getSpeed(speed2));
+ 
+ if(speedL > 60){
+  speedL = 60;
+ }
+ if(speedR > 60){
+  speedR = 60;
+ }
+ if(speedL < -60){
+  speedL = -60;
+ }
+ if(speedR < -60){
+  speedR = -60;
+ }
+
+  //Envoie les infos au moteur
+  sendMotorValue(0, speedL);
+  sendMotorValue(1, speedR);
 }
 
 bool sendSound(int id, int data) {
@@ -458,8 +526,8 @@ bool sendSound(int id, int data) {
 }
 
 bool sendContact(int id, int data, int duration) {
- // if (waitingResponse || !stateModules[1])return false;
- if (!stateModules[1])return false;
+  // if (waitingResponse || !stateModules[1])return false;
+  if (!stateModules[1])return false;
   nbTransmission++;
   Wire.beginTransmission(ADDR_CONTACT);
   Wire.write(id);
@@ -474,7 +542,7 @@ bool sendContact(int id, int data, int duration) {
 }
 
 bool sendTracking(int id) {
- //  if (waitingResponse || !stateModules[0])return false;
+  //  if (waitingResponse || !stateModules[0])return false;
   if (!stateModules[0])return false;
   nbTransmission++;
   Wire.beginTransmission(ADDR_TRACKING);
@@ -484,7 +552,7 @@ bool sendTracking(int id) {
 }
 
 bool sendEyes(int id, int data) {
-//  if (waitingResponse || !stateModules[4])return false;
+  //  if (waitingResponse || !stateModules[4])return false;
   if (!stateModules[4])return false;
   nbTransmission++;
   Wire.beginTransmission(ADDR_EYES);
@@ -630,7 +698,7 @@ void loopPauseGenerale() {
       if (ButtonA(true)) {
         resumeGame();
         setState(State::MenuSelection);
-        setupRobot();       
+        setupRobot();
       }
       break;
   }
@@ -732,7 +800,7 @@ void logs() {
 
 
 float JoystickValue(byte v) {
-  float tmp = mapfloat(v, 0, 255, -1, 1);
+  float tmp = mapfloat(v, 0, 255, 1, -1);
   if (tmp >= -JOYSTICK_MARGIN && tmp <= JOYSTICK_MARGIN)tmp = 0;
   return tmp;
 }
