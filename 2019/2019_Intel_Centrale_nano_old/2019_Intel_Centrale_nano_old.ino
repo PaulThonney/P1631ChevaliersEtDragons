@@ -278,7 +278,7 @@ bool pingAddr(int addr) {
 }
 
 bool getData(int addr, byte *buffer, int nbBytes) {
-  // if (waitingResponse)return false;
+   if (waitingResponse)return false;
   if (!pingAddr(addr))return false;
   nbRequest++;
   waitingResponse = true;
@@ -297,7 +297,7 @@ bool getData(int addr, byte *buffer, int nbBytes) {
 }
 
 bool sendData(int addr, byte *buffer, int nbBytes) {
-  //  if (waitingResponse)return false;
+    if (waitingResponse)return false;
   nbTransmission++;
   Wire.beginTransmission(addr);
   for (int i = 0; i < nbBytes; i++) {
@@ -514,7 +514,7 @@ void loopManuel() {
 }
 
 bool sendSound(int id, int data) {
-  //if (waitingResponse || !stateModules[2])return false;
+  if (waitingResponse || !stateModules[2])return false;
   if (!stateModules[2])return false;
   nbTransmission++;
   Wire.beginTransmission(ADDR_SOUND);
@@ -527,7 +527,7 @@ bool sendSound(int id, int data) {
 }
 
 bool sendContact(int id, int data, int duration) {
-  // if (waitingResponse || !stateModules[1])return false;
+  if (waitingResponse || !stateModules[1])return false;
   if (!stateModules[1])return false;
   nbTransmission++;
   Wire.beginTransmission(ADDR_CONTACT);
@@ -543,7 +543,7 @@ bool sendContact(int id, int data, int duration) {
 }
 
 bool sendTracking(int id) {
-  //  if (waitingResponse || !stateModules[0])return false;
+  if (waitingResponse || !stateModules[0])return false;
   if (!stateModules[0])return false;
   nbTransmission++;
   Wire.beginTransmission(ADDR_TRACKING);
@@ -553,7 +553,7 @@ bool sendTracking(int id) {
 }
 
 bool sendEyes(int id, int data) {
-  //  if (waitingResponse || !stateModules[4])return false;
+    if (waitingResponse || !stateModules[4])return false;
   if (!stateModules[4])return false;
   nbTransmission++;
   Wire.beginTransmission(ADDR_EYES);
