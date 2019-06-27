@@ -96,11 +96,11 @@ bool sendContact(int id, int data = -1, int duration = -1);
 
 // maxSpeed[%] - hurtCooldown[ms]
 int difficulty[][2] = {
-  {60, 4000},//easy
-  {80, 2500},//medium
-  {100, 1000}//hard
+  {30, 4000},//easy
+  {40, 2500},//medium
+  {50, 1000}//hard
 };
-int currentDifficulty = 0;
+int currentDifficulty = EASY;
 
 int getDifficulty(int id) {
   return difficulty[currentDifficulty][id];
@@ -426,8 +426,8 @@ void loopManuel() {
   controllerOutput = 27;
 
   //Récupère les infos
-  int jX = (JoystickValue(AxisLX())*100);
-  int jY =  (JoystickValue(AxisLY())*100);
+  int jX = (JoystickValue(AxisLX()) * 100);
+  int jY =  (JoystickValue(AxisLY()) * 100);
 
   //Viteese des roues (De base à l'arrêt)
   short speedL = 0;
@@ -458,54 +458,55 @@ void loopManuel() {
     sendMotorValue(1, getSpeed(speed2));
   */
 
- if(jY > 10){
-  if(jX < -10){
-    speedR = 100+jX; 
-    speedL = -jX;
-  }else if(jX > 10){
-    speedR = jX;
-    speedL = 100-jX;
-  }else{
-    speedR = jY;
-    speedL = jY;
+  if (jY > 10) {
+    if (jX < -30) {
+      speedR = 100 + jX;
+      speedL = -jX;
+    } else if (jX > 30) {
+      speedR = jX;
+      speedL = 100 - jX;
+    } else {
+      speedR = jY;
+      speedL = jY;
+    }
+  } else if (jY < -10) {
+    if (jX < -30) {
+      speedR = -1 * ((100 + jX));
+      speedL = jX;
+    } else if (jX > 30) {
+      speedR = -jX;
+      speedL = -100 + jX;
+    } else {
+      speedR = jY;
+      speedL = jY;
+    }
+  } else {
+    if (jX < -10) {
+      speedR = -1 * ((100 + jX));
+      speedL = jX;
+    } else if (jX > 10) {
+      speedR = -jX;
+      speedL = -100 + jX;
+    } else {
+      speedR = 0;
+      speedL = 0;
+    }
   }
- } else if(jY < -10){
-  if(jX < -10){
-    speedR = -1*((100+jX)); 
-    speedL = jX;
-  }else if(jX > 10){
-    speedR = -jX;
-    speedL = -100+jX;
-  }else{
-    speedR = jY;
-    speedL = jY;
-  }
- }else{
-  if(jX < -10){
-    speedR = 100+jX; 
-    speedL = -jX;
-  }else if(jX > 10){
-    speedR = jX;
-    speedL = 100-jX;
-  }else{
-    speedR = 0;
-    speedL = 0;
-  }
- }
 
- 
- if(speedL > 60){
-  speedL = 60;
- }
- if(speedR > 60){
-  speedR = 60;
- }
- if(speedL < -60){
-  speedL = -60;
- }
- if(speedR < -60){
-  speedR = -60;
- }
+
+  short vitesseMax =  getDifficulty(MAX_SPEED);
+  if (speedL > vitesseMax) {
+    speedL = vitesseMax;
+  }
+  if (speedR > vitesseMax) {
+    speedR = vitesseMax;
+  }
+  if (speedL < -vitesseMax) {
+    speedL = -vitesseMax;
+  }
+  if (speedR < -vitesseMax) {
+    speedR = -vitesseMax;
+  }
 
   //Envoie les infos au moteur
   sendMotorValue(0, speedL);
