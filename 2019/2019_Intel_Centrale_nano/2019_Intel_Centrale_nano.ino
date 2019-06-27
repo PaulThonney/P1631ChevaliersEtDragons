@@ -75,7 +75,7 @@ typedef enum State { // On définit les états possible de la machine
 } State;
 
 State setState(State state, int menuPos = -1);
-State savedMode = State::Manuel;
+State savedMode = State::Automatique;
 State currentState = State::MenuSelection; // On démarre sur le menu de sélection
 State previousState; // Ancien état
 
@@ -134,7 +134,10 @@ void loop() {
   timeStartAt = millis();
   communicationController(); // On commence par communiquer les dernières infos avec la manette
   pingModules();
-  loopAmbiant();
+  if (currentState != State::PauseGenerale) {
+    loopAmbiant();
+  }
+
   if (millis() > askResponseAt + 25) {
     askResponseAt = 0;
     waitingResponse = false;
@@ -171,7 +174,7 @@ void loop() {
   }
   loopTime = millis() - timeStartAt;
 
-  logs();
+  // logs();
 }
 
 void setupRobot() {
@@ -254,7 +257,30 @@ void loopHurt() {
     }
   }
 }
-
+/*
+//Clean button state for startup
+void loopHurtStart() {
+  if (millis() <= lastContactAt + 250) {
+    return;
+  }
+  lastContactAt = millis();
+  byte buffer[10];
+  if (getData(ADDR_CONTACT, buffer, 2)) {
+    if ((bool)buffer[0] == true) {
+      int dmg = 0;
+      // Serial.println("Which Contact:" + String(buffer[1]));
+      switch (buffer[1]) {
+        case 0: dmg = 1; break;
+        case 1: dmg = 1; break;
+        case 2: dmg = 1; break;
+        case 3: dmg = 1; break;
+        case 4: dmg = 1; break;
+        case 5: dmg = 1; break;
+      }
+    }
+  }
+}
+*/
 void pingModules() {
   if (millis() <= lastPingAt + 500) {
     return;
@@ -320,9 +346,9 @@ void loopAmbiant() {
 
 void loopDisconnected() {
   if (onStartState()) {
-    sendEyes(7);
     sendMotorValue(0, 0);
     sendMotorValue(1, 0);
+    sendEyes(7);
     sendSound(0, 4);
     sendContact(4);
   }
@@ -345,6 +371,7 @@ int getSpeed(int speed) {
 void loopAutomatique() {
   if (onStartState()) {//Seulement la première fois qu'il rentre dans la loop
     sendTracking(0x1E);
+    //loopHurtStart();
   }
 
   if (checkPause()) { // quitte directement la loop si la pause est pressée et évite que le "state" puisse être changé dans la fonction
@@ -376,7 +403,7 @@ void loopAutomatique() {
     //sendEyes(5, (3 << 3) | map(headAngle, -90, 90, 0, 5));
   }
 
-  if (headAngle > -30 && headAngle < 30) {
+  if (headAngle > -10 && headAngle < 10) {
     if (isFindTarget) {
       int speed = getSpeed(map(targetDistance, 0, 255, 20, getDifficulty(MAX_SPEED)));
       //int speed = 20;
@@ -385,7 +412,7 @@ void loopAutomatique() {
     }
 
   } else {
-    int speed = getSpeed(map(abs(headAngle), 0, 90, 10, (int) (getDifficulty(MAX_SPEED) / 2.5)));
+    int speed = getSpeed(map(abs(headAngle), 0, 90, 10, (int) (getDifficulty(MAX_SPEED) / 2)));
     if (headAngle < 0) {
       sendMotorValue(0, -speed);
       sendMotorValue(1, speed);
