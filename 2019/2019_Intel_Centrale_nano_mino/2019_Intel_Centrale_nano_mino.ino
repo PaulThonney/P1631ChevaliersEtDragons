@@ -393,35 +393,55 @@ void loopAutomatique() {
 
   short speedL = 0;
   short speedR = 0;
-
-  if (isFindTarget) {
-    if (headAngle >= 10) {
+/*// 28.06.19 19h28
+  if (-10 < headAngle && headAngle < 10) {
+    if (isFindTarget) {
+      speedR =  getSpeed(getDifficulty(MAX_SPEED));
+      speedL = getSpeed(getDifficulty(MAX_SPEED));
+    }
+  } else {
+    if (headAngle >= 0) {
       speedR = getSpeed(map(abs(headAngle), 0, 90, getDifficulty(MAX_SPEED), 0));
       speedL = getSpeed(getDifficulty(MAX_SPEED));
     }
-    else if (headAngle <= -10) {
+    else if (headAngle <= -0) {
       speedR = getSpeed(getDifficulty(MAX_SPEED));
       speedL = getSpeed(map(abs(headAngle), 0, 90, getDifficulty(MAX_SPEED), 0 ));
     }
-    else if (-10 < headAngle && headAngle < 10) {
-      speedR = getSpeed(getDifficulty(MAX_SPEED));
-      speedL = getSpeed(getDifficulty(MAX_SPEED));
-    }
+  }
+  sendMotorValue(1, -speedL);
+  sendMotorValue(0, -speedR);
+  */
+  
+  //28.06.19 18h56 and 28.06.19 19h42
+    if (isFindTarget) {
+      if (headAngle >= 10) {
+        speedR = getSpeed(map(abs(headAngle), 0, 90, getDifficulty(MAX_SPEED), 0));
+        speedL = getSpeed(getDifficulty(MAX_SPEED));
+      }
+      else if (headAngle <= -10) {
+        speedR = getSpeed(getDifficulty(MAX_SPEED));
+        speedL = getSpeed(map(abs(headAngle), 0, 90, getDifficulty(MAX_SPEED), 0 ));
+      }
+      else if (-10 < headAngle && headAngle < 10) {
+        speedR =  getSpeed(getDifficulty(MAX_SPEED));
+        speedL = getSpeed(getDifficulty(MAX_SPEED));
+      }
 
-    //Envoie les infos au moteur
-    sendMotorValue(0, speedL);
-    sendMotorValue(1, speedR);
-  }
-  else {
-    short speed = getSpeed(map(abs(headAngle), 0, 90, 0 , getDifficulty(MAX_SPEED) / 1.25));
-    if (headAngle < 0) {
-      sendMotorValue(0, -speed);
-      sendMotorValue(1, speed);
-    } else {
-      sendMotorValue(0, speed);
-      sendMotorValue(1, -speed);
+      //Envoie les infos au moteur
+      sendMotorValue(1, -speedL);
+      sendMotorValue(0, -speedR);
     }
-  }
+    else {
+      short speed = getSpeed(map(abs(headAngle), 0, 90, 0 , getDifficulty(MAX_SPEED) / 1.25));
+      if (headAngle < 0) {
+        sendMotorValue(0, -speed);
+        sendMotorValue(1, speed);
+      } else {
+        sendMotorValue(0, speed);
+        sendMotorValue(1, -speed);
+      }
+    }
 }
 
 /*
