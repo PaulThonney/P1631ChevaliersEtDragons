@@ -2,7 +2,7 @@
   Son but est de récolter toutes les informations des capteurs et de prendre des décisions en conséquence
   @author: Dany VALADO (2018) Lucien PRUVOT Paul THONNEY
   DATE: 28.05.19
-  REMERCIEMENTS: Merci à Maxime SCHARWATH et Joan MAILLARD pour leur aide
+  REMERCIEMENTS: Merci à Maxime SCHARWATH, Joan MAILLARD et Léonard BESSEAU pour leur aide
 */
 
 #include <Wire.h> //I2C
@@ -75,7 +75,7 @@ typedef enum State { // On définit les états possible de la machine
 } State;
 
 State setState(State state, int menuPos = -1);
-State savedMode = State::Automatique;
+State savedMode = State::Manuel;
 State currentState = State::MenuSelection; // On démarre sur le menu de sélection
 State previousState; // Ancien état
 
@@ -134,10 +134,7 @@ void loop() {
   timeStartAt = millis();
   communicationController(); // On commence par communiquer les dernières infos avec la manette
   pingModules();
-  if (currentState != State::PauseGenerale) {
-    loopAmbiant();
-  }
-
+  loopAmbiant();
   if (millis() > askResponseAt + 25) {
     askResponseAt = 0;
     waitingResponse = false;
@@ -174,7 +171,7 @@ void loop() {
   }
   loopTime = millis() - timeStartAt;
 
-  // logs();
+  logs();
 }
 
 void setupRobot() {
@@ -257,30 +254,7 @@ void loopHurt() {
     }
   }
 }
-/*
-//Clean button state for startup
-void loopHurtStart() {
-  if (millis() <= lastContactAt + 250) {
-    return;
-  }
-  lastContactAt = millis();
-  byte buffer[10];
-  if (getData(ADDR_CONTACT, buffer, 2)) {
-    if ((bool)buffer[0] == true) {
-      int dmg = 0;
-      // Serial.println("Which Contact:" + String(buffer[1]));
-      switch (buffer[1]) {
-        case 0: dmg = 1; break;
-        case 1: dmg = 1; break;
-        case 2: dmg = 1; break;
-        case 3: dmg = 1; break;
-        case 4: dmg = 1; break;
-        case 5: dmg = 1; break;
-      }
-    }
-  }
-}
-*/
+
 void pingModules() {
   if (millis() <= lastPingAt + 500) {
     return;
@@ -304,7 +278,7 @@ bool pingAddr(int addr) {
 }
 
 bool getData(int addr, byte *buffer, int nbBytes) {
-  // if (waitingResponse)return false;
+  if (waitingResponse)return false;
   if (!pingAddr(addr))return false;
   nbRequest++;
   waitingResponse = true;
@@ -323,7 +297,7 @@ bool getData(int addr, byte *buffer, int nbBytes) {
 }
 
 bool sendData(int addr, byte *buffer, int nbBytes) {
-  //  if (waitingResponse)return false;
+  if (waitingResponse)return false;
   nbTransmission++;
   Wire.beginTransmission(addr);
   for (int i = 0; i < nbBytes; i++) {
@@ -346,9 +320,9 @@ void loopAmbiant() {
 
 void loopDisconnected() {
   if (onStartState()) {
+    sendEyes(7);
     sendMotorValue(0, 0);
     sendMotorValue(1, 0);
-    sendEyes(7);
     sendSound(0, 4);
     sendContact(4);
   }
@@ -371,7 +345,6 @@ int getSpeed(int speed) {
 void loopAutomatique() {
   if (onStartState()) {//Seulement la première fois qu'il rentre dans la loop
     sendTracking(0x1E);
-    //loopHurtStart();
   }
 
   if (checkPause()) { // quitte directement la loop si la pause est pressée et évite que le "state" puisse être changé dans la fonction
@@ -403,16 +376,29 @@ void loopAutomatique() {
     //sendEyes(5, (3 << 3) | map(headAngle, -90, 90, 0, 5));
   }
 
-  if (headAngle > -10 && headAngle < 10) {
-    if (isFindTarget) {
-      int speed = getSpeed(map(targetDistance, 0, 255, 20, getDifficulty(MAX_SPEED)));
-      //int speed = 20;
-      sendMotorValue(0, -speed);
-      sendMotorValue(1, -speed);
+  short speedL = 0;
+  short speedR = 0;
+
+  if (isFindTarget) {
+    if (headAngle >= 10) {
+      speedR = getSpeed(map(abs(headAngle), 0, 90, getDifficulty(MAX_SPEED), 0));
+      speedL = getSpeed(getDifficulty(MAX_SPEED));
+    }
+    else if (headAngle <= -10) {
+      speedR = getSpeed(getDifficulty(MAX_SPEED));
+      speedL = getSpeed(map(abs(headAngle), 0, 90, getDifficulty(MAX_SPEED), 0 ));
+    }
+    else if (-10 < headAngle && headAngle < 10) {
+      speedR = getSpeed(getDifficulty(MAX_SPEED));
+      speedL = getSpeed(getDifficulty(MAX_SPEED));
     }
 
-  } else {
-    int speed = getSpeed(map(abs(headAngle), 0, 90, 10, (int) (getDifficulty(MAX_SPEED) / 2)));
+    //Envoie les infos au moteur
+    sendMotorValue(0, speedL);
+    sendMotorValue(1, speedR);
+  }
+  else {
+    short speed = getSpeed(map(abs(headAngle), 0, 90, 0 , getDifficulty(MAX_SPEED)/1.25));
     if (headAngle < 0) {
       sendMotorValue(0, -speed);
       sendMotorValue(1, speed);
@@ -541,7 +527,7 @@ void loopManuel() {
 }
 
 bool sendSound(int id, int data) {
-  //if (waitingResponse || !stateModules[2])return false;
+  if (waitingResponse || !stateModules[2])return false;
   if (!stateModules[2])return false;
   nbTransmission++;
   Wire.beginTransmission(ADDR_SOUND);
@@ -554,7 +540,7 @@ bool sendSound(int id, int data) {
 }
 
 bool sendContact(int id, int data, int duration) {
-  // if (waitingResponse || !stateModules[1])return false;
+  if (waitingResponse || !stateModules[1])return false;
   if (!stateModules[1])return false;
   nbTransmission++;
   Wire.beginTransmission(ADDR_CONTACT);
@@ -570,7 +556,7 @@ bool sendContact(int id, int data, int duration) {
 }
 
 bool sendTracking(int id) {
-  //  if (waitingResponse || !stateModules[0])return false;
+  if (waitingResponse || !stateModules[0])return false;
   if (!stateModules[0])return false;
   nbTransmission++;
   Wire.beginTransmission(ADDR_TRACKING);
@@ -580,7 +566,7 @@ bool sendTracking(int id) {
 }
 
 bool sendEyes(int id, int data) {
-  //  if (waitingResponse || !stateModules[4])return false;
+  if (waitingResponse || !stateModules[4])return false;
   if (!stateModules[4])return false;
   nbTransmission++;
   Wire.beginTransmission(ADDR_EYES);
