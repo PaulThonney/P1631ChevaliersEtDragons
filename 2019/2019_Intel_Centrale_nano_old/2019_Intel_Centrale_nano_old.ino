@@ -278,7 +278,7 @@ bool pingAddr(int addr) {
 }
 
 bool getData(int addr, byte *buffer, int nbBytes) {
-   if (waitingResponse)return false;
+  if (waitingResponse)return false;
   if (!pingAddr(addr))return false;
   nbRequest++;
   waitingResponse = true;
@@ -297,7 +297,7 @@ bool getData(int addr, byte *buffer, int nbBytes) {
 }
 
 bool sendData(int addr, byte *buffer, int nbBytes) {
-    if (waitingResponse)return false;
+  if (waitingResponse)return false;
   nbTransmission++;
   Wire.beginTransmission(addr);
   for (int i = 0; i < nbBytes; i++) {
@@ -375,25 +375,50 @@ void loopAutomatique() {
     }
     //sendEyes(5, (3 << 3) | map(headAngle, -90, 90, 0, 5));
   }
+  /*
+    if (headAngle > -30 && headAngle < 30) {
+      if (isFindTarget) {
+        int speed = getSpeed(map(targetDistance, 0, 255, 20, getDifficulty(MAX_SPEED)));
+        //int speed = 20;
+        sendMotorValue(0, -speed);
+        sendMotorValue(1, -speed);
+      }
 
-  if (headAngle > -30 && headAngle < 30) {
-    if (isFindTarget) {
-      int speed = getSpeed(map(targetDistance, 0, 255, 20, getDifficulty(MAX_SPEED)));
-      //int speed = 20;
-      sendMotorValue(0, -speed);
-      sendMotorValue(1, -speed);
+    } else {
+      int speed = getSpeed(map(abs(headAngle), 0, 90, 10, (int) (getDifficulty(MAX_SPEED) / 2.5)));
+      if (headAngle < 0) {
+        sendMotorValue(0, -speed);
+        sendMotorValue(1, speed);
+      } else {
+        sendMotorValue(0, speed);
+        sendMotorValue(1, -speed);
+      }
+    }
+  */
+  short speedL = 0;
+  short speedR = 0;
+  
+  if (isFindTarget) {
+    if (headAngle < 0) {
+      speedR = getSpeed(map(abs(headAngle), 0, 90, getDifficulty(MAX_SPEED), 0));
+      speedL = getSpeed(MAX_SPEED);
+    } else if (headAngle = 0) {
+      speedR = getSpeed(MAX_SPEED);
+      speedL = getSpeed(MAX_SPEED);
+    } else {
+      speedR = getSpeed(MAX_SPEED);
+      speedL = getSpeed(map(abs(headAngle), 0, 90, getDifficulty(MAX_SPEED),0 ));
     }
 
   } else {
-    int speed = getSpeed(map(abs(headAngle), 0, 90, 10, (int) (getDifficulty(MAX_SPEED) / 2.5)));
-    if (headAngle < 0) {
-      sendMotorValue(0, -speed);
-      sendMotorValue(1, speed);
-    } else {
-      sendMotorValue(0, speed);
-      sendMotorValue(1, -speed);
-    }
+
   }
+
+    //Envoie les infos au moteur
+  sendMotorValue(0, speedL);
+  sendMotorValue(1, speedR);
+
+  
   controllerOutput = 26;
 }
 
@@ -553,7 +578,7 @@ bool sendTracking(int id) {
 }
 
 bool sendEyes(int id, int data) {
-    if (waitingResponse || !stateModules[4])return false;
+  if (waitingResponse || !stateModules[4])return false;
   if (!stateModules[4])return false;
   nbTransmission++;
   Wire.beginTransmission(ADDR_EYES);
