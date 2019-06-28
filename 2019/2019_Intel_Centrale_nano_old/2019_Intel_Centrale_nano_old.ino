@@ -22,7 +22,7 @@
 //DEFINE ROBOT
 
 #define MAX_LIFE 6
-#define CONTACT_DEFAULT_MODE 0 //Valueur par defaut => 0: Tracking, 1: Rainbow, 2:AnimShield, 3: BlinkAll(RED)
+#define CONTACT_DEFAULT_MODE 1 //Valueur par defaut => 0: Tracking, 1: Rainbow, 2:AnimShield, 3: BlinkAll(RED)
 
 //BUTTONS
 #define BUFFER_SIZE 9
@@ -373,31 +373,9 @@ void loopAutomatique() {
       waitingResponse = false;
       lastUpdateHead = millis();
     }
-
-
-
     //sendEyes(5, (3 << 3) | map(headAngle, -90, 90, 0, 5));
   }
-  /*
-    if (headAngle > -30 && headAngle < 30) {
-      if (isFindTarget) {
-        int speed = getSpeed(map(targetDistance, 0, 255, 20, getDifficulty(MAX_SPEED)));
-        //int speed = 20;
-        sendMotorValue(0, -speed);
-        sendMotorValue(1, -speed);
-      }
 
-    } else {
-      int speed = getSpeed(map(abs(headAngle), 0, 90, 10, (int) (getDifficulty(MAX_SPEED) / 2.5)));
-      if (headAngle < 0) {
-        sendMotorValue(0, -speed);
-        sendMotorValue(1, speed);
-      } else {
-        sendMotorValue(0, speed);
-        sendMotorValue(1, -speed);
-      }
-    }
-  */
   short speedL = 0;
   short speedR = 0;
 
@@ -420,7 +398,7 @@ void loopAutomatique() {
     sendMotorValue(1, speedR);
   }
   else {
-    short speed = getSpeed(map(abs(headAngle), 0, 90, 0 , getDifficulty(MAX_SPEED)));
+    short speed = getSpeed(map(abs(headAngle), 0, 90, 0 , getDifficulty(MAX_SPEED)/2));
     if (headAngle < 0) {
       sendMotorValue(0, -speed);
       sendMotorValue(1, speed);
