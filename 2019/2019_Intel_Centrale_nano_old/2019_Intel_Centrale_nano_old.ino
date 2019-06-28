@@ -2,7 +2,7 @@
   Son but est de récolter toutes les informations des capteurs et de prendre des décisions en conséquence
   @author: Dany VALADO (2018) Lucien PRUVOT Paul THONNEY
   DATE: 28.05.19
-  REMERCIEMENTS: Merci à Maxime SCHARWATH et Joan MAILLARD pour leur aide
+  REMERCIEMENTS: Merci à Maxime SCHARWATH, Joan MAILLARD et Léonard BESSEAU pour leur aide
 */
 
 #include <Wire.h> //I2C
@@ -375,7 +375,7 @@ void loopAutomatique() {
     }
 
 
-    
+
     //sendEyes(5, (3 << 3) | map(headAngle, -90, 90, 0, 5));
   }
   /*
@@ -400,45 +400,35 @@ void loopAutomatique() {
   */
   short speedL = 0;
   short speedR = 0;
-  int speed =  getDifficulty(MAX_SPEED);
+
   if (isFindTarget) {
-
-    sendMotorValue(0, 0);
-    sendMotorValue(1, 0);
-    /*
-      if (headAngle <= 10) {
+    if (headAngle >= 10) {
       speedR = getSpeed(map(abs(headAngle), 0, 90, getDifficulty(MAX_SPEED), 0));
-      speedL = getSpeed(MAX_SPEED);
-      }
-      else if (-10 < headAngle && headAngle < 10) {
-      speedR = getSpeed(MAX_SPEED);
-      speedL = getSpeed(MAX_SPEED);
-      }
-      else if (headAngle <= -10) {
-      speedR = getSpeed(MAX_SPEED);
+      speedL = getSpeed(getDifficulty(MAX_SPEED));
+    }
+    else if (-10 < headAngle && headAngle < 10) {
+      speedR = getSpeed(getDifficulty(MAX_SPEED));
+      speedL = getSpeed(getDifficulty(MAX_SPEED));
+    }
+    else if (headAngle <= -10) {
+      speedR = getSpeed(getDifficulty(MAX_SPEED));
       speedL = getSpeed(map(abs(headAngle), 0, 90, getDifficulty(MAX_SPEED), 0 ));
-      }
+    }
 
-      //Envoie les infos au moteur
-      sendMotorValue(0, speedL);
-      sendMotorValue(1, -speedR);
-    */
+    //Envoie les infos au moteur
+    sendMotorValue(0, speedL);
+    sendMotorValue(1, speedR);
   }
   else {
-    sendMotorValue(0, speed);
-    sendMotorValue(1, speed);
-  }
-  /*
-    int speed = getSpeed(map(abs(headAngle), 0, 90, 0 , getDifficulty(MAX_SPEED)));
+    short speed = getSpeed(map(abs(headAngle), 0, 90, 0 , getDifficulty(MAX_SPEED)));
     if (headAngle < 0) {
-    sendMotorValue(0, -speed);
-    sendMotorValue(1, speed);
+      sendMotorValue(0, -speed);
+      sendMotorValue(1, speed);
     } else {
-    sendMotorValue(0, speed);
-    sendMotorValue(1, -speed);
+      sendMotorValue(0, speed);
+      sendMotorValue(1, -speed);
     }
-    }
-  */
+  }
   controllerOutput = 26;
 }
 
