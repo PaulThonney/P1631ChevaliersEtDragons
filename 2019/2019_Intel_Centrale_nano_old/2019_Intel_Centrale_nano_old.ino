@@ -398,7 +398,7 @@ void loopAutomatique() {
     sendMotorValue(1, speedR);
   }
   else {
-    short speed = getSpeed(map(abs(headAngle), 0, 90, 0 , getDifficulty(MAX_SPEED)/2));
+    short speed = getSpeed(map(abs(headAngle), 0, 90, 0 , getDifficulty(MAX_SPEED)/1.25));
     if (headAngle < 0) {
       sendMotorValue(0, -speed);
       sendMotorValue(1, speed);
