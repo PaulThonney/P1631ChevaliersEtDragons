@@ -397,28 +397,36 @@ void loopAutomatique() {
   */
   short speedL = 0;
   short speedR = 0;
-  
+
   if (isFindTarget) {
-    if (headAngle < 0) {
+    if (headAngle <= 10) {
       speedR = getSpeed(map(abs(headAngle), 0, 90, getDifficulty(MAX_SPEED), 0));
       speedL = getSpeed(MAX_SPEED);
-    } else if (headAngle = 0) {
+    }
+    else if (-10 < headAngle && headAngle < 10) {
       speedR = getSpeed(MAX_SPEED);
       speedL = getSpeed(MAX_SPEED);
-    } else {
+    }
+    else if (headAngle <= -10) {
       speedR = getSpeed(MAX_SPEED);
-      speedL = getSpeed(map(abs(headAngle), 0, 90, getDifficulty(MAX_SPEED),0 ));
+      speedL = getSpeed(map(abs(headAngle), 0, 90, getDifficulty(MAX_SPEED), 0 ));
     }
 
-  } else {
+    //Envoie les infos au moteur
+    sendMotorValue(0, speedL);
+    sendMotorValue(1, speedR);
 
   }
-
-    //Envoie les infos au moteur
-  sendMotorValue(0, speedL);
-  sendMotorValue(1, speedR);
-
-  
+  else {
+    int speed = getSpeed(map(abs(headAngle), 0, 90, 0 , getDifficulty(MAX_SPEED)));
+    if (headAngle < 0) {
+      sendMotorValue(0, -speed);
+      sendMotorValue(1, speed);
+    } else {
+      sendMotorValue(0, speed);
+      sendMotorValue(1, -speed);
+    }
+  }
   controllerOutput = 26;
 }
 
