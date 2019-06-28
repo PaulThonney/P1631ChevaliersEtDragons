@@ -22,7 +22,7 @@
 //DEFINE ROBOT
 
 #define MAX_LIFE 6
-#define CONTACT_DEFAULT_MODE 1 //Valueur par defaut => 0: Tracking, 1: Rainbow, 2:AnimShield, 3: BlinkAll(RED)
+#define CONTACT_DEFAULT_MODE 0 //Valueur par defaut => 0: Tracking, 1: Rainbow, 2:AnimShield, 3: BlinkAll(RED)
 
 //BUTTONS
 #define BUFFER_SIZE 9
@@ -373,6 +373,9 @@ void loopAutomatique() {
       waitingResponse = false;
       lastUpdateHead = millis();
     }
+
+
+    
     //sendEyes(5, (3 << 3) | map(headAngle, -90, 90, 0, 5));
   }
   /*
@@ -397,36 +400,45 @@ void loopAutomatique() {
   */
   short speedL = 0;
   short speedR = 0;
-
+  int speed =  getDifficulty(MAX_SPEED);
   if (isFindTarget) {
-    if (headAngle <= 10) {
+
+    sendMotorValue(0, 0);
+    sendMotorValue(1, 0);
+    /*
+      if (headAngle <= 10) {
       speedR = getSpeed(map(abs(headAngle), 0, 90, getDifficulty(MAX_SPEED), 0));
       speedL = getSpeed(MAX_SPEED);
-    }
-    else if (-10 < headAngle && headAngle < 10) {
+      }
+      else if (-10 < headAngle && headAngle < 10) {
       speedR = getSpeed(MAX_SPEED);
       speedL = getSpeed(MAX_SPEED);
-    }
-    else if (headAngle <= -10) {
+      }
+      else if (headAngle <= -10) {
       speedR = getSpeed(MAX_SPEED);
       speedL = getSpeed(map(abs(headAngle), 0, 90, getDifficulty(MAX_SPEED), 0 ));
-    }
+      }
 
-    //Envoie les infos au moteur
-    sendMotorValue(0, speedL);
-    sendMotorValue(1, speedR);
-
+      //Envoie les infos au moteur
+      sendMotorValue(0, speedL);
+      sendMotorValue(1, -speedR);
+    */
   }
   else {
+    sendMotorValue(0, speed);
+    sendMotorValue(1, speed);
+  }
+  /*
     int speed = getSpeed(map(abs(headAngle), 0, 90, 0 , getDifficulty(MAX_SPEED)));
     if (headAngle < 0) {
-      sendMotorValue(0, -speed);
-      sendMotorValue(1, speed);
+    sendMotorValue(0, -speed);
+    sendMotorValue(1, speed);
     } else {
-      sendMotorValue(0, speed);
-      sendMotorValue(1, -speed);
+    sendMotorValue(0, speed);
+    sendMotorValue(1, -speed);
     }
-  }
+    }
+  */
   controllerOutput = 26;
 }
 
