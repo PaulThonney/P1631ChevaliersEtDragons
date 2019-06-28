@@ -64,6 +64,8 @@ byte controllerOutput = 0;
 byte controllerBuzzer = 0; //0-15
 byte controllerVibrator = 0; //0-15
 
+byte memOutput = 0;
+
 typedef enum State { // On définit les états possible de la machine
   Automatique,
   Manuel,
@@ -210,6 +212,14 @@ bool hurt(int dmg) {
   currentLife -= dmg;
   //Serial.println(String(dmg) + " dmg");
   // Serial.println(String(currentLife) + " lives");
+  if (currentState == State::Automatique) {
+    controllerOutput = 4 + (6 - currentLife);
+    memOutput = controllerOutput;
+  }
+  if (currentState == State::Manuel) {
+    controllerOutput = 10 + (6 - currentLife);
+    memOutput = controllerOutput;
+  }
   if (currentLife <= 0) {//DEAD
     currentLife = 0;
     die();
@@ -345,6 +355,11 @@ int getSpeed(int speed) {
 void loopAutomatique() {
   if (onStartState()) {//Seulement la première fois qu'il rentre dans la loop
     sendTracking(0x1E);
+    if (memOutput != 4) {
+      controllerOutput = 4 ;
+    } else {
+      controllerOutput = memOutput ;
+    }
   }
 
   if (checkPause()) { // quitte directement la loop si la pause est pressée et évite que le "state" puisse être changé dans la fonction
@@ -398,7 +413,7 @@ void loopAutomatique() {
     sendMotorValue(1, speedR);
   }
   else {
-    short speed = getSpeed(map(abs(headAngle), 0, 90, 0 , getDifficulty(MAX_SPEED)/1.25));
+    short speed = getSpeed(map(abs(headAngle), 0, 90, 0 , getDifficulty(MAX_SPEED) / 1.25));
     if (headAngle < 0) {
       sendMotorValue(0, -speed);
       sendMotorValue(1, speed);
@@ -407,7 +422,6 @@ void loopAutomatique() {
       sendMotorValue(1, -speed);
     }
   }
-  controllerOutput = 26;
 }
 
 /*
@@ -417,6 +431,11 @@ void loopAutomatique() {
 void loopManuel() {
   if (onStartState()) {//Seulement la première fois qu'il rentre dans la loop
     sendTracking(0x2E);
+    if (memOutput != 10) {
+      controllerOutput = 10 ;
+    } else {
+      controllerOutput = memOutput ;
+    }
   }
 
   //sendEyes(5, (map(AxisLX(), 0, 255, 0, 6) << 3) | map(AxisLY(), 0, 255, 0, 6));
@@ -435,9 +454,6 @@ void loopManuel() {
     return;
   }
 
-
-  controllerOutput = 27;
-
   //Récupère les infos
   int jX = (JoystickValue(AxisLX()) * 100);
   int jY =  (JoystickValue(AxisLY()) * 100);
@@ -448,28 +464,6 @@ void loopManuel() {
 
   // Sens du moteur
   bool forward = true;
-
-  /*
-    float hyp = sqrt(jX * jX + jY * jY);
-
-
-    int speed1 = getDifficulty(MAX_SPEED) * hyp;
-    int speed2 = getDifficulty(MAX_SPEED) * hyp;
-
-    if (jX < 0) {
-    speed1 *= -1*(1 - abs(jX));
-    }else if (jX > 0) {
-    speed2 *= -1*(1 - abs(jX));
-    }
-
-    if(jY < 0){
-    speed1 *= -1;
-    speed2 *= -1;
-    }
-
-    sendMotorValue(0, getSpeed(speed1));
-    sendMotorValue(1, getSpeed(speed2));
-  */
 
   if (jY > 10) {
     if (jX < -30) {

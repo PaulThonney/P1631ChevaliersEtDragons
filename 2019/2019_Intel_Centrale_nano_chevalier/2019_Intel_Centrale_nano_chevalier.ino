@@ -22,7 +22,7 @@
 //DEFINE ROBOT
 
 #define MAX_LIFE 6
-#define CONTACT_DEFAULT_MODE 1 //Valueur par defaut => 0: Tracking, 1: Rainbow, 2:AnimShield, 3: BlinkAll(RED)
+#define CONTACT_DEFAULT_MODE 0 //Valueur par defaut => 0: Tracking, 1: Rainbow, 2:AnimShield, 3: BlinkAll(RED)
 
 //BUTTONS
 #define BUFFER_SIZE 9
@@ -64,6 +64,8 @@ byte controllerOutput = 0;
 byte controllerBuzzer = 0; //0-15
 byte controllerVibrator = 0; //0-15
 
+byte memOutput = 0;
+
 typedef enum State { // On définit les états possible de la machine
   Automatique,
   Manuel,
@@ -97,10 +99,10 @@ bool sendContact(int id, int data = -1, int duration = -1);
 // maxSpeed[%] - hurtCooldown[ms]
 int difficulty[][2] = {
   {30, 4000},//easy
-  {40, 2500},//medium
-  {50, 1000}//hard
+  {50, 2500},//medium
+  {70, 1000}//hard
 };
-int currentDifficulty = EASY;
+int currentDifficulty = MEDIUM;
 
 int getDifficulty(int id) {
   return difficulty[currentDifficulty][id];
@@ -121,10 +123,9 @@ unsigned long lastLogAt;
 
 void setup() {
   Wire.begin(ADDR_INTELLIGENCE_CENTRALE);
-    Serial2.begin(115200);
   Serial.begin(115200);
 
-  Serial.println("Setup completed");
+  //Serial.println("Setup completed");
   delay(1000);
   pingModules();
   setupRobot();
@@ -211,6 +212,14 @@ bool hurt(int dmg) {
   currentLife -= dmg;
   //Serial.println(String(dmg) + " dmg");
   // Serial.println(String(currentLife) + " lives");
+  if (currentState == State::Automatique) {
+    controllerOutput = 4 + (6 - currentLife);
+    memOutput = controllerOutput;
+  }
+  if (currentState == State::Manuel) {
+    controllerOutput = 10 + (6 - currentLife);
+    memOutput = controllerOutput;
+  }
   if (currentLife <= 0) {//DEAD
     currentLife = 0;
     die();
@@ -264,7 +273,7 @@ void pingModules() {
   for (int i = 0; i < sizeof(modules) / sizeof(modules[0]); i++) {
     bool state = pingAddr(modules[i]);
     if (state != stateModules[i]) {
-       Serial.println("Module " + String(i) + " " + String((state ? "CONNECTED" : "DISCONNECTED")));
+      // Serial.println("Module " + String(i) + " " + String((state ? "CONNECTED" : "DISCONNECTED")));
       sendSound(0, state ? 1 : 2);
     }
     stateModules[i] = state;
@@ -346,6 +355,11 @@ int getSpeed(int speed) {
 void loopAutomatique() {
   if (onStartState()) {//Seulement la première fois qu'il rentre dans la loop
     sendTracking(0x1E);
+    if (memOutput != 4) {
+      controllerOutput = 4 ;
+    } else {
+      controllerOutput = memOutput ;
+    }
   }
 
   if (checkPause()) { // quitte directement la loop si la pause est pressée et évite que le "state" puisse être changé dans la fonction
@@ -399,7 +413,7 @@ void loopAutomatique() {
     sendMotorValue(1, speedR);
   }
   else {
-    short speed = getSpeed(map(abs(headAngle), 0, 90, 0 , getDifficulty(MAX_SPEED)/1.25));
+    short speed = getSpeed(map(abs(headAngle), 0, 90, 0 , getDifficulty(MAX_SPEED) / 1.25));
     if (headAngle < 0) {
       sendMotorValue(0, -speed);
       sendMotorValue(1, speed);
@@ -408,7 +422,6 @@ void loopAutomatique() {
       sendMotorValue(1, -speed);
     }
   }
-  controllerOutput = 26;
 }
 
 /*
@@ -418,6 +431,11 @@ void loopAutomatique() {
 void loopManuel() {
   if (onStartState()) {//Seulement la première fois qu'il rentre dans la loop
     sendTracking(0x2E);
+    if (memOutput != 10) {
+      controllerOutput = 10 ;
+    } else {
+      controllerOutput = memOutput ;
+    }
   }
 
   //sendEyes(5, (map(AxisLX(), 0, 255, 0, 6) << 3) | map(AxisLY(), 0, 255, 0, 6));
@@ -435,9 +453,6 @@ void loopManuel() {
     setupRobot();
     return;
   }
-
-
-  controllerOutput = 27;
 
   //Récupère les infos
   int jX = (JoystickValue(AxisLX()) * 100);
@@ -580,10 +595,10 @@ bool sendMotorValue(byte id, int value) {
 */
 void communicationController() {
   byte dataBufferWrite[2] = {controllerOutput, (byte)((controllerBuzzer << 4) | controllerVibrator)}; // réenvoie les données à la manette
-  Serial2.write(dataBufferWrite, 2);
+  Serial.write(dataBufferWrite, 2);
   // controlle la longueure de la tramme
-  while (Serial2.available() < BUFFER_SIZE) {}
-  Serial2.readBytes(dataBuffer, BUFFER_SIZE); //lit les infos en provenance de la manette
+  while (Serial.available() < BUFFER_SIZE) {}
+  Serial.readBytes(dataBuffer, BUFFER_SIZE); //lit les infos en provenance de la manette
 
   if (InfoController() != CONNECTED) {
     setState(State::Disconnected);
@@ -712,7 +727,7 @@ void  loopMenuSelection() {
     default:
     case 0:
       controllerOutput = 1;
-      selectedMode = State::Automatique;
+      selectedMode = State::Manuel;
       break;
     case 1:
       controllerOutput = 2;
@@ -766,7 +781,7 @@ void logs() {
     return;
   }
   lastLogAt = millis();
-   Serial.println("======LOGS======");
+  /* Serial.println("======LOGS======");
     Serial.println("Execute Time: " + String(millis() / 1000.0) + "s");
     Serial.println("nbTransmission: " + String(nbTransmission));
     Serial.println("nbRequest: " + String(nbRequest));
@@ -785,7 +800,7 @@ void logs() {
     Serial.println("Module Eyes (" + toHex(modules[4]) + "): " + String((stateModules[4] ? "CONNECTED" : "DISCONNECTED")));
     Serial.println("================");
     Serial.println();
-  
+  */
 }
 
 
