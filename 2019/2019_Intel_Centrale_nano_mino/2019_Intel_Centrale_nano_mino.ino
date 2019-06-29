@@ -188,7 +188,7 @@ void setupRobot() {
 int boostSpeed() {
   int percent = 0;
   if (isCooldown()) {
-    percent += 25;
+    percent += 15;
   }
   return percent;
 }
@@ -445,7 +445,7 @@ void loopAutomatique() {
   //29.06.19 15h04
   if (headAngle > -30 && headAngle < 30) {
     if (isFindTarget) {
-      int speed = getSpeed(map(targetDistance, 0, 255, 20, getDifficulty(MAX_SPEED)*1.5));
+      int speed = getSpeed(map(targetDistance, 0, 255, 20, getDifficulty(MAX_SPEED)*1.25));
       //int speed = 20;
       sendMotorValue(0, -speed);
       sendMotorValue(1, -speed);
