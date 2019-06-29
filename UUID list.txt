@@ -1,0 +1,21 @@
+UUID list
+
+Intelligence centrale minotaure
+	Service b9d4de40-44be-11e9-b210-d663bd873d93
+	Char commande b9d4e282-44be-11e9-b210-d663bd873d93
+	Char feedback 861c92c2-4ef6-11e9-8647-d663bd873d93
+
+Intelligence centrale banc de test
+	Service 9e145556-9355-11e9-bc42-526af7764f64
+	Char commande 9e145a06-9355-11e9-bc42-526af7764f64
+	Char feedback 9e145b64-9355-11e9-bc42-526af7764f64
+
+Intelligence centrale chevalier 1
+	Service f7332b3c-9358-11e9-bc42-526af7764f64
+	Char commande f7332dbc-9358-11e9-bc42-526af7764f64
+	Char feedback f73330b4-9358-11e9-bc42-526af7764f64
+
+Serveur manettes arcade
+	Service d8ecf00e-997a-11e9-a2a3-2a2ae2dbcce4
+	Char manette 1 d8ecf478-997a-11e9-a2a3-2a2ae2dbcce4
+	Char manette 2 d8ecf64e-997a-11e9-a2a3-2a2ae2dbcce4

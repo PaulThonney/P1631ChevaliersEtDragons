@@ -446,8 +446,7 @@ void loopAutomatique() {
   if (headAngle > -30 && headAngle < 30) {
     if (isFindTarget) {
       int speed = getSpeed(map(targetDistance, 0, 255, 20, getDifficulty(MAX_SPEED)*1.25));
-      //int speed = 20;
-      sendMotorValue(0, -speed);
+      sendMotorValue(0, -speed); // les moteurs sont monté à l'envers sur le minotaure
       sendMotorValue(1, -speed);
     }
 
