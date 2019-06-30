@@ -350,8 +350,8 @@ bool pingAddr(int addr) {
 /*
    @func bool getData demande au module demandé de lui transmettre son data et le stocke dans un buffer
    @param in addr adresse du module demandé
-   @param byte *buffer pour y ranger le data
-   @param int nbBytes nombre de bytes attendu lors de la transmission
+   #param byte *buffer pour y ranger le data
+   #param int nbBytes nombre de bytes attendu lors de la transmission
    @return bool
 */
 bool getData(int addr, byte *buffer, int nbBytes) {
@@ -376,8 +376,8 @@ bool getData(int addr, byte *buffer, int nbBytes) {
 /*
    @func bool sendData envoie du data au module demandé
    @param int addr adresse du module demandé
-   @param byte buffer Stockage de l'info à envoyer
-   @param int nbBytes nombre de bytes à envoyer
+   #param byte buffer Stockage de l'info à envoyer
+   #param int nbBytes nombre de bytes à envoyer
    @return bool
 */
 bool sendData(int addr, byte *buffer, int nbBytes) {
@@ -575,8 +575,8 @@ void loopManuel() {
   }
 
   //Récupère les infos
-  int jX = (JoystickValue(AxisLX()) * 100);
-  int jY =  (JoystickValue(AxisLY()) * 100);
+  int jX = (joystickValue(AxisLX()) * 100);
+  int jY =  (joystickValue(AxisLY()) * 100);
 
   //Viteese des roues (De base à l'arrêt)
   short speedL = 0;
@@ -643,7 +643,7 @@ void loopManuel() {
 /*
   @func bool sendSound envoie l'information demandée au module de son
   @param int id du module demandé
-  @param int data
+  #param int data
   @return bool
 */
 bool sendSound(int id, int data) {
@@ -662,8 +662,8 @@ bool sendSound(int id, int data) {
 /*
   @func bool sendContact envoie l'information demandée au module des contacts
   @param int id du module demandé
-  @param int data
-  @param int duration
+  #param int data
+  #param int duration
   @return bool
 */
 bool sendContact(int id, int data, int duration) {
@@ -684,7 +684,7 @@ bool sendContact(int id, int data, int duration) {
 
 /*
   @func bool sendTracking envoie l'information demandée au module de tracking
-  @param int id du module demandé
+  #param int id du module demandé
   @return bool
 */
 bool sendTracking(int id) {
@@ -697,9 +697,9 @@ bool sendTracking(int id) {
 }
 
 /*
-  @func bool sendSound envoie l'information demandée au module de son
+  @func bool sendEyes envoie l'information demandée au module des yeux
   @param int id du module demandé
-  @param int data
+  #param int data
   @return bool
 */
 bool sendEyes(int id, int data) {
@@ -714,6 +714,12 @@ bool sendEyes(int id, int data) {
   return Wire.endTransmission() == 1;
 }
 
+/*
+  @func bool sendMotorValue envoie l'information demandée au module des roues
+  @param int id du module demandé
+  #param int value
+  @return bool
+*/
 bool sendMotorValue(byte id, int value) {
   if (waitingResponse || !stateModules[3])return false;
   if (currentMotorValue[id] == value)return true; //évite de faire une comm si rien n'a changé
@@ -917,8 +923,11 @@ void loopDifficulty() {
   }
 }
 
-//LOGS
-
+/*
+  @func void logs Print dans la console les infos ci-dessous (utilisé pour le debug)
+  @param null
+  @return void
+*/
 void logs() {
   if (millis() < lastLogAt + LOGS_DELAY) {
     return;
@@ -946,17 +955,23 @@ void logs() {
   */
 }
 
-
-//CONTROLLER
-
-
-float JoystickValue(byte v) {
+/*
+  @func float joystickValue calcule la valeure du joystick en prenant en compte la marge
+  @param byte v
+  @return float tmp
+*/
+float joystickValue(byte v) {
   float tmp = mapfloat(v, 0, 255, 1, -1);
   if (tmp >= -JOYSTICK_MARGIN && tmp <= JOYSTICK_MARGIN)tmp = 0;
   return tmp;
 }
 
-float TriggerValue(byte v) {
+/*
+  @func float triggerValue transforme les infos de joystick entre 0 et 1 (non utilisée)
+  @param byte v
+  @return float tmp
+*/
+float triggerValue(byte v) {
   float tmp = mapfloat(v, 0, 255, 0, 1);
   return tmp;
 }
