@@ -1,5 +1,8 @@
-//Maxime Scharwath
-
+/* Code de l'Arduino gérant les plaque de contacts des robot
+  Son but est de récolter les informations des contacts et de gèrer les NéoPixels
+  @author: Paul THONNEY and Maxime SCHARWATH
+  DATE: 30.06.19
+*/
 #include <Adafruit_NeoPixel.h> //LED RGB
 #include <Wire.h> //I2C
 
@@ -85,13 +88,22 @@ void setup() {
   Serial.begin(9600);
 }
 
+/*
+   @func void requestEvent envoie à l'intelligence centrale le fait qu'il se soit fait toucher et quel contact c'était
+   @param null
+   @return void
+*/
 void requestEvent() {
   //Serial.println("REQUEST");
   Wire.write(getHit);
   Wire.write(lastHitZone);
   getHit = false;
 }
-
+/*
+   @func void recieveEvent reçoit les info de l'intelligence centrale et oriente sur la bonne fonction dépendament du type de message
+   @param int howMany
+   @return void
+*/
 void receiveEvent(int howMany) {
   if (howMany == 0) {
     //Serial.println("PING");
@@ -109,7 +121,11 @@ void receiveEvent(int howMany) {
   }
 }
 
-
+/*
+   @func void setMode set le mode demandé par l'intelligence centrale
+   @param null
+   @return void
+*/
 void setMode(int mode) {
   perviousAnimMode = animMode;
   animMode = mode;
@@ -117,6 +133,11 @@ void setMode(int mode) {
   animAt = 0;
 }
 
+/*
+   @func void loop Est la boucle centrale du code c'est elle qui appelle les fonctions principales
+   @param null
+   @return void
+*/
 void loop() {
   checkContact();
   switch (animMode) {
@@ -143,6 +164,11 @@ void loop() {
   }
 }
 
+/*
+   @func void checkContact check si un contact est pressé et stocke l'information en vu d'un envoit
+   @param null
+   @return void
+*/
 void checkContact() {
   if (animMode == 3) {
     getHit = false;
@@ -163,16 +189,18 @@ void checkContact() {
         getHit = true;
         lastHitZone = i;
       }
-
-      Serial.println("contact");
+      //Serial.println("contact");
     }
     oldContact[i] = newContact[i];
   }
   //Serial.println();
 }
 
-
-
+/*
+   @func bool animBlink
+   @param null
+   @return void
+*/
 bool animBlink(uint32_t color, int duration, int callbackAnim) {
   if (!isBlinking) {
     isBlinking = true;
