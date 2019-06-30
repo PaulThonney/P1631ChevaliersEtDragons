@@ -771,7 +771,11 @@ State setState(State state, int menuPos) {
   currentState = state;
   return currentState;
 }
-
+/*
+  @func bool onStartState vérifie si l'on execute pour la première fois une action
+  @param null
+  @return bool
+*/
 bool onStartState() {
   if (!isStartedState) {
     isStartedState = true;
@@ -889,7 +893,11 @@ void  loopMenuSelection() {
     setState(State::MenuGO);
   }
 }
-
+/*
+  @func void loopDifficulty Menu de choix de la difficulté
+  @param null
+  @return void
+*/
 void loopDifficulty() {
   if (onStartState()) {
   }
@@ -900,7 +908,7 @@ void loopDifficulty() {
   switch (pos) {
     default:
     case 0:
-      controllerOutput = 1;
+      controllerOutput = 1; // nbr arbitraire car non implémenté par le groupe manette...
       diffTemp = EASY;
       break;
     case 1:
@@ -993,6 +1001,7 @@ byte InfoController() {
 byte AxisLX() {
   return dataBuffer[4];
 }
+
 /*
    @func byte AxisLY retourne la valeure de l'axe Y du joystick gauche
    @param null
@@ -1001,6 +1010,7 @@ byte AxisLX() {
 byte AxisLY() {
   return dataBuffer[5];
 }
+
 /*
    @func byte AxisRX retourne la valeure de l'axe X du joystick droite
    @param null
@@ -1009,6 +1019,7 @@ byte AxisLY() {
 byte AxisRX() {
   return dataBuffer[6];
 }
+
 /*
    @func byte AxisRY retourne la valeure de l'axe Y du joystick droite
    @param null
@@ -1017,6 +1028,7 @@ byte AxisRX() {
 byte AxisRY() {
   return dataBuffer[7];
 }
+
 /*
    @func byte AxisLT retourne la valeure de la gachette droite
    @param null
@@ -1025,6 +1037,7 @@ byte AxisRY() {
 byte AxisLT() {
   return dataBuffer[2];
 }
+
 /*
    @func byte AxisRT retourne la valeure de la gachette Gauche
    @param null
@@ -1033,6 +1046,7 @@ byte AxisLT() {
 byte AxisRT() {
   return dataBuffer[3];
 }
+
 /*
    @func bool ButtonA retourne la valeure du boutton A
    @param null
@@ -1043,6 +1057,7 @@ bool ButtonA(bool flanc) {
   if (flanc)v = ButtonFlanc(v, 0);
   return v;
 }
+
 /*
    @func bool ButtonB retourne la valeure du boutton B
    @param null
@@ -1053,6 +1068,7 @@ bool ButtonB(bool flanc) {
   if (flanc)v = ButtonFlanc(v, 1);
   return v;
 }
+
 /*
    @func bool ButtonX retourne la valeure du boutton X
    @param null
@@ -1063,6 +1079,7 @@ bool ButtonX(bool flanc) {
   if (flanc)v = ButtonFlanc(v, 2);
   return v;
 }
+
 /*
    @func bool ButtonY retourne la valeure du boutton Y
    @param null
@@ -1073,6 +1090,7 @@ bool ButtonY(bool flanc) {
   if (flanc)v = ButtonFlanc(v, 3);
   return v;
 }
+
 /*
    @func bool ButtonWEST retourne la valeure du boutton WEST
    @param null
@@ -1083,6 +1101,7 @@ bool ButtonWEST(bool flanc) {
   if (flanc)v = ButtonFlanc(v, 4);
   return v;
 }
+
 /*
    @func bool ButtonEAST retourne la valeure du boutton EAST
    @param null
@@ -1093,6 +1112,7 @@ bool ButtonEAST(bool flanc) {
   if (flanc)v = ButtonFlanc(v, 5);
   return v;
 }
+
 /*
    @func bool ButtonNORTH retourne la valeure du boutton NORTH
    @param null
@@ -1103,6 +1123,7 @@ bool ButtonNORTH(bool flanc) {
   if (flanc)v = ButtonFlanc(v, 6);
   return v;
 }
+
 /*
    @func bool ButtonSOUTH retourne la valeure du boutton SOUTH
    @param null
@@ -1113,6 +1134,7 @@ bool ButtonSOUTH(bool flanc) {
   if (flanc)v = ButtonFlanc(v, 7);
   return v;
 }
+
 /*
    @func bool ButtonLB retourne la valeure du boutton LB
    @param null
@@ -1123,6 +1145,7 @@ bool ButtonLB(bool flanc) {
   if (flanc)v = ButtonFlanc(v, 8);
   return v;
 }
+
 /*
    @func bool ButtonRB retourne la valeure du boutton RB
    @param null
@@ -1133,6 +1156,7 @@ bool ButtonRB(bool flanc) {
   if (flanc)v = ButtonFlanc(v, 9);
   return v;
 }
+
 /*
    @func bool ButtonLS retourne la valeure du boutton LS
    @param null
@@ -1143,6 +1167,7 @@ bool ButtonLS(bool flanc) {
   if (flanc)v = ButtonFlanc(v, 10);
   return v;
 }
+
 /*
    @func bool ButtonRS retourne la valeure du boutton RS
    @param null
@@ -1153,6 +1178,7 @@ bool ButtonRS(bool flanc) {
   if (flanc)v = ButtonFlanc(v, 11);
   return v;
 }
+
 /*
    @func bool ButtonSTART retourne la valeure du boutton START
    @param null
@@ -1163,6 +1189,7 @@ bool ButtonSTART(bool flanc) {
   if (flanc)v = ButtonFlanc(v, 12);
   return v;
 }
+
 /*
    @func bool ButtonSELECT retourne la valeure du boutton SELECT
    @param null
@@ -1173,6 +1200,7 @@ bool ButtonSELECT(bool flanc) {
   if (flanc)v = ButtonFlanc(v, 13);
   return v;
 }
+
 /*
    @func bool ButtonFlanc Permet de détecter les flancs montants des boutons dans une seule fonction
    @param bool button
@@ -1188,10 +1216,24 @@ bool ButtonFlanc(bool button, byte flancId) {
   return temp;
 }
 
+/*
+  @func float jmapfloat Comme son nom l'indique c'est une fonction map mais qui comprends les floats
+  @param float x 
+  #param float in_min
+  #param float in_max
+  #param float out_min
+  #param float out_max
+  @return float la valeure mapée en float
+*/
 float mapfloat(float x, float in_min, float in_max, float out_min, float out_max) {
   return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
 
+/*
+  @func String toHex donne l'adresse du module en hexadécimal
+  @param int num id en décimal du module
+  @return string buffer valeure en hexa de l'adresse du module
+*/
 String toHex(int num) {
   char buffer[10];
   sprintf(buffer, "%x", num);
