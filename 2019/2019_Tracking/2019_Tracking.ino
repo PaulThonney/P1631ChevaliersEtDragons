@@ -1,7 +1,7 @@
-// Code de l'Arduino Nano gérant le traquage avant du Minotaure
-// Paul THONNEY et Maxime SCHARWATH
-// 06.06.19
-
+/* Code de l'Arduino gérant le tracking avant avec la Pixy de devant
+  @author: Paul THONNEY and Maxime SCHARWATH
+  DATE: 06.06.19
+*/
 #include <SPI.h> //comunication avec la Pixy
 #include <Wire.h> //I2C
 
@@ -54,6 +54,11 @@ void setup() {
   pixy.setLED(255, 0, 0); //set Pixy led RED
 }
 
+/*
+   @func void loop Est la boucle centrale du code c'est elle qui appelle les fonctions principales
+   @param null
+   @return void
+*/
 void loop() {
   if (millis() > watchTimes + WATCHTIMES_TIMEOUT) {
     //Serial.println("TIME OUT");
@@ -64,7 +69,11 @@ void loop() {
 
 unsigned int count = 0;
 
-
+/*
+   @func void requestEvent envoie à l'intelligence centrale le fait qu'il se soit fait toucher et quel contact c'était
+   @param null
+   @return void
+*/
 void requestEvent() {
   nbRequest++;
   Wire.write(byte(angle));
@@ -74,6 +83,11 @@ void requestEvent() {
   Serial.println("REQUEST " + String(isTracking));
 }
 
+/*
+   @func void tracking Tracke la cible à l'aide de la pixy et du servomoteur
+   @param null
+   @return void
+*/
 void tracking() {
   uint16_t blocks; //nombre d'objets détecté par la Pixy
   angle = servo.read();
@@ -94,7 +108,7 @@ void tracking() {
     }
     //Serial.println(distance);
     float posObjpositif = abs(posObj);
-    int incrementation = mapfloat(posObjpositif, 0 , 1 , 0, 6);
+    int incrementation = mapfloat(posObjpositif, 0 , 1 , 0, 6); // 0 à 6 sont les valeures qui marchaient le mieux
     if (posObj < 0) {
       servo.write(angle - incrementation);
       lastSideObject = 1;
@@ -136,6 +150,11 @@ void tracking() {
   }
 }
 
+/*
+   @func void recieveEvent reçoit les info de l'intelligence centrale et oriente sur la bonne fonction dépendament du type de message
+   @param int howMany
+   @return void
+*/
 void receiveEvent(int howMany) {
   if (howMany == 0) {
     //Serial.println("PING");
@@ -154,6 +173,15 @@ void receiveEvent(int howMany) {
   }
 }
 
+/*
+  @func float mapfloat Comme son nom l'indique c'est une fonction map mais qui comprends les floats
+  @param float x 
+  #param float in_min
+  #param float in_max
+  #param float out_min
+  #param float out_max
+  @return float la valeure mapée en float
+*/
 float mapfloat(float x, float in_min, float in_max, float out_min, float out_max) {
   return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }

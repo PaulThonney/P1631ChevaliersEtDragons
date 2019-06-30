@@ -1,14 +1,6 @@
-/*
-  Menu driven control of a sound board over UART.
-  Commands for playing by # or by name (full 11-char name)
-  Hard reset and List files (when not playing audio)
-  Vol + and - (only when not playing audio)
-  Pause, unpause, quit playing (when playing audio)
-  Current play time, and bytes remaining & total bytes (when playing audio)
-
-  Connect UG to ground to have the sound board boot into UART mode
-
-
+/* Code de l'Arduino gérant le son des robot
+  @author: Paul THONNEY and Maxime SCHARWATH
+  DATE: 30.06.19
 */
 #include <Wire.h>
 #include <SoftwareSerial.h>
@@ -56,6 +48,11 @@ void setup() {
   list();
 }
 
+/*
+   @func void list liste les fichiers présents dans la mémoire
+   @param null
+   @return void
+*/
 void list() {
   uint8_t files = sfx.listFiles();
 
@@ -75,6 +72,11 @@ uint8_t piste = 0;
 bool play = false;
 bool stop = false;
 
+/*
+   @func void loopPlay joue le son demandé
+   @param null
+   @return void
+*/
 void loopPlay() {
   if (!play)return;
   play = false;
@@ -82,6 +84,12 @@ void loopPlay() {
     Serial.println("Failed to play track?");
   }
 }
+
+/*
+   @func void loopStop stop la lecture du son
+   @param null
+   @return void
+*/
 void loopStop() {
   if (!stop)return;
   stop = false;
@@ -89,11 +97,22 @@ void loopStop() {
     Serial.println("Failed to stop track?");
   }
 }
+
+/*
+   @func void loop Est la boucle centrale du code c'est elle qui appelle les fonctions principales
+   @param null
+   @return void
+*/
 void loop() {
   loopPlay();
   loopStop();
 }
 
+/*
+   @func int nbTracks liste le nombre de tracks présent ans la mémoire
+   @param int nMax
+   @return int num
+*/
 int nbTracks(int nMax) {
   if (nMax < 0) {
     nMax = sizeof(catSounds) / sizeof(catSounds[0]);
@@ -105,6 +124,11 @@ int nbTracks(int nMax) {
   return num;
 }
 
+/*
+   @func void recieveEvent reçoit les info de l'intelligence centrale et oriente sur la bonne fonction dépendament du type de message
+   @param int howMany
+   @return void
+*/
 void receiveEvent(int howMany) {
   if (howMany == 0) {
     //Serial.println("PING");

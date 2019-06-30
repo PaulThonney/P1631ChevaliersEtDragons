@@ -1,11 +1,15 @@
-// Maxime Scharwath
-#include <SoftPWM.h>
+/*
+  Code de l'Arduino gérant les roues et la température
+  @author: Paul THONNEY and Maxime SCHARWATH
+  DATE: 30.06.19
+*/
+#include <SoftPWM.h> // car les pins de sortie ne sont pas PWM compatible
 #include <Wire.h>
 #include <PID_v1.h>// PID by Brett Beauregard
 
 #define ADDR_WHEEL 0x13
 
-#define USE_PID true
+#define USE_PID true //utiliser ou non le PID
 
 #define WATCHTIMES_TIMEOUT 2500
 
@@ -30,6 +34,7 @@
 #define PIN_LED_URGENCE 2
 #define EMERGENCY_TEMP 40
 
+//facteurs pour le PID
 #define KP 1
 #define KI 0
 #define KD 0
@@ -102,6 +107,11 @@ void setup() {
   }
 }
 
+/*
+  @func void checkRPM compte les RPM des roues
+  @param int dur
+  @return void
+*/
 void checkRPM(int dur) {
   //Serial.println(String(digitalRead(CAPTOR_MOTOR_R)) + "," + String(digitalRead(CAPTOR_MOTOR_L)));
   for (int i = 0; i < NB_MOTORS; i++) {
@@ -135,7 +145,11 @@ void checkRPM(int dur) {
   }
 }
 
-
+/*
+  @func void checkTemp Vérifie les températures et allume les ventilateurs si elle dépasse la valeure limite.
+  @param null
+  @return void
+*/
 void checkTemp() {
   int tempR = getTemp(PIN_TEMP_R);
   if (tempR > EMERGENCY_TEMP) {
@@ -174,6 +188,12 @@ void checkTemp() {
   }
 }
 
+/*
+  @func bool setMotorValue donne une valeure au moteur en vérifie si elle est correcte
+  @param byte id
+  #param int value
+  @return void
+*/
 bool setMotorValue(byte id, int value) {
   if (id > (sizeof(stateMotors) / sizeof(stateMotors[0])))return false; //vérifie que l'id est valide
   if (value < -100 || value > 100)return false;//vérifie que la value est valide
@@ -181,10 +201,25 @@ bool setMotorValue(byte id, int value) {
   stateMotors[id][2] = abs(value);//Setpoint
   return true;
 }
+
+/*
+  @func float mapfloat Comme son nom l'indique c'est une fonction map mais qui comprends les floats
+  @param float x 
+  #param float in_min
+  #param float in_max
+  #param float out_min
+  #param float out_max
+  @return float la valeure mapée en float
+*/
 float mapfloat(float x, float in_min, float in_max, float out_min, float out_max) {
   return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
 
+/*
+  @func void Motor pilote les ponts en H en fonction de l'id du moteur demandé
+  @param byte id
+  @return void
+*/
 void Motor(byte id) {
   double value = stateMotors[id][3];
   int pinPontH1 = pinMotors[id][0];
@@ -213,7 +248,7 @@ void Motor(byte id) {
 
   digitalWrite(pinPontH1, (value < 0) ? LOW : HIGH);
   digitalWrite(pinPontH2, (value < 0) ? HIGH : LOW);
-   Serial.println("value: " + String(value));
+  Serial.println("value: " + String(value));
   Serial.println("pinPontH1: " + String((value < 0) ? LOW : HIGH));
   Serial.println("pinPontH2: " + String((value < 0) ? HIGH : LOW));
 
@@ -225,12 +260,23 @@ void Motor(byte id) {
   }
 }
 
+/*
+   @func void loopMotor boucle centrale des moteurs
+   appelle les fontions utiles aux moteurs
+   @param null
+   @return void
+*/
 void loopMotors() {
   checkRPM(150);//check rpm every 25ms
   Motor(0);
   Motor(1);
 }
 
+/*
+   @func void loop Est la boucle centrale du code c'est elle qui appelle les fonctions principales
+   @param null
+   @return void
+*/
 void loop() {
   if (millis() > watchTimes + WATCHTIMES_TIMEOUT) {
     Serial.println("TIME OUT");
@@ -250,6 +296,11 @@ int getTemp(byte pin) {
 }
 
 ////////////////////PARTIE I2C////////////////////
+/*
+   @func void recieveEvent reçoit les info de l'intelligence centrale et oriente sur la bonne fonction dépendament du type de message
+   @param int howMany
+   @return void
+*/
 void receiveEvent(int howMany) {
   if (howMany == 0) {
     watchTimes = millis();
@@ -275,6 +326,11 @@ void receiveEvent(int howMany) {
   }
 }
 
+/*
+   @func void requestEvent envoie à l'intelligence centraleles infos sur la surchauffe
+   @param null
+   @return void
+*/
 void requestEvent() {
   Serial.println("REQUEST");
   byte temp = 0;

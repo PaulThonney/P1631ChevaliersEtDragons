@@ -1,3 +1,9 @@
+/* Code de l'Arduino gérant les matrices des yeux du chevalier
+  Le code a été repris presque complètement depuis sa version de 2017 nous avons juste changé la com. et ajouté des
+  mode supplémentaire tel que la pause.
+  @author: (2017) Nathan LOVOO (2019) Paul THONNEY and Maxime SCHARWATH
+  DATE: 30.06.19
+*/
 #include <Wire.h>
 #include "SoftwareI2C.h"
 #include "Adafruit_LEDBackpack_Soft.h"

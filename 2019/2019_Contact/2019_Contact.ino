@@ -197,9 +197,11 @@ void checkContact() {
 }
 
 /*
-   @func bool animBlink
-   @param null
-   @return void
+   @func bool animBlink gère l'animation du blink
+   @param uint32_t color
+   #param int duration
+   #param callbackAnim
+   @return bool
 */
 bool animBlink(uint32_t color, int duration, int callbackAnim) {
   if (!isBlinking) {
@@ -215,6 +217,11 @@ bool animBlink(uint32_t color, int duration, int callbackAnim) {
   return true;
 }
 
+/*
+   @func void animTracking gère l'animation du mode tracking
+   @param null
+   @return void
+*/
 void animTracking() {
   showLed(MATRIX_FRONT_LEFT, BLUE);
   showLed(MATRIX_FRONT_RIGHT, RED);
@@ -222,6 +229,11 @@ void animTracking() {
   showLed(MATRIX_BACK_RIGHT, RED);
 }
 
+/*
+   @func void animRainbow gère l'animation du mode rainbow
+   @param null
+   @return void
+*/
 void animRainbow() {
   if ((unsigned long)(millis() - currentTimes[0]) >= 100) {
     currentTimes[0] = millis();
@@ -241,6 +253,11 @@ void animRainbow() {
   }
 }
 
+/*
+   @func void gère l'animation du mode Shield
+   @param null
+   @return void
+*/
 void animShield() {
   int v = (sin(millis() / 225.0) + 1) / 2.0 * 155 + 10;
   uint32_t c = matrice[0].Color(0, 0, v);
@@ -249,7 +266,12 @@ void animShield() {
   }
 }
 
-
+/*
+   @func void showLed allume la led de la couleur demandée
+   @param uint8_t n
+   #param uint32_t color
+   @return void
+*/
 // n est le numero de la matrice, ici 0 à 5
 void showLed(uint8_t n, uint32_t color) {
   for (uint8_t i = 0; i < PIXEL_NUMBER; i++) {
@@ -258,23 +280,43 @@ void showLed(uint8_t n, uint32_t color) {
   matrice[n].show();
 }
 
+/*
+   @func void showAll allume toute les leds de la matrice avec la couleur demandée
+   @param uint32_t color
+   @return void
+*/
 void showAll(uint32_t color) {
   for (uint8_t i = 0; i < MATRIX_NUMBER; i++) {
     showLed(i, color);
   }
 }
 
+/*
+   @func void blinkLed fait clignotter la led demandée
+   @param uint32_t color
+   @return void
+*/
 void blinkLed(uint8_t n, uint32_t color) {
   bool on = (millis() % (BLINKING_TIME * 2) <= BLINKING_TIME);
   showLed(n, (on) ? color : BLACK);
 }
 
+/*
+   @func void blinkAll fait clignotter toutes les leds de la matrice
+   @param uint32_t color
+   @return void
+*/
 void blinkAll(uint32_t color) {
   for (uint8_t i = 0; i < MATRIX_NUMBER; i++) {
     blinkLed(i, color);
   }
 }
 
+/*
+   @func void rainbow fait un effet rainbow sur la matrice demandée (fourni avec la librairie)
+   @param uint8_t n
+   @return void
+*/
 void rainbow(uint8_t n) {
   for (uint16_t i = 0; i < matrice[n].numPixels(); i++)
     matrice[n].setPixelColor(i, roue(n, (i + cycle[n]) & 255));
@@ -284,7 +326,12 @@ void rainbow(uint8_t n) {
     cycle[n] = 0;
 }
 
-
+/*
+   @func uint32_t roue fonction utilisée par la fonction rainbow (fourni avec la librairie)
+   @param uint8_t n
+   #param rouePos
+   @return void
+*/
 uint32_t roue(uint8_t n, byte rouePos) {
   rouePos = 255 - rouePos;
   if (rouePos < 85) {

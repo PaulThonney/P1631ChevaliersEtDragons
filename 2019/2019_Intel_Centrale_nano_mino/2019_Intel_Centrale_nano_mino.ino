@@ -753,6 +753,7 @@ void communicationController() {
     setState(State::Disconnected);
   }
 }
+
 /*
    @func State setState  Elle change l'état actuelle de la variable state et retourne son état actuel.
    Permet de faire d'autres actions sur des variables lors d'un changement d'état directement dans cette fonction si nécessaire.
@@ -771,6 +772,7 @@ State setState(State state, int menuPos) {
   currentState = state;
   return currentState;
 }
+
 /*
   @func bool onStartState vérifie si l'on execute pour la première fois une action
   @param null
@@ -783,6 +785,7 @@ bool onStartState() {
   }
   return false;
 }
+
 /*
    @func bool checkPause Vérifie s'il y a une demande de pause lors de la partie
    @param null
@@ -797,6 +800,7 @@ bool checkPause() {
   }
   return false;
 }
+
 /*
    @func void loopMenuGo Gère le menuGo (affichage et pression des boutons)
    @param null
@@ -810,6 +814,7 @@ void  loopMenuGo() {
     setState(savedMode);
   }
 }
+
 /*
    @param changeCursorPosition Change la position du curseur dans les menus à l'aide des touches NORTH et SOUTH
    @param byte sizeMenu taille du menu en comptant à partir de 1
@@ -832,6 +837,7 @@ byte changeCursorPosition(byte sizeMenu) {
   }
   return stateMenuPos;
 }
+
 /*
    @func void loopPauseGenerale Gère le mode pauseGenerale (affichage et pression des boutons)
    @param null
@@ -864,6 +870,7 @@ void loopPauseGenerale() {
       break;
   }
 }
+
 /*
    @func void loopMenuSelection Gère le mode MenuSelection (affichage et pression des boutons)
    @param null
@@ -893,6 +900,7 @@ void  loopMenuSelection() {
     setState(State::MenuGO);
   }
 }
+
 /*
   @func void loopDifficulty Menu de choix de la difficulté
   @param null
@@ -1217,7 +1225,7 @@ bool ButtonFlanc(bool button, byte flancId) {
 }
 
 /*
-  @func float jmapfloat Comme son nom l'indique c'est une fonction map mais qui comprends les floats
+  @func float mapfloat Comme son nom l'indique c'est une fonction map mais qui comprends les floats
   @param float x 
   #param float in_min
   #param float in_max
