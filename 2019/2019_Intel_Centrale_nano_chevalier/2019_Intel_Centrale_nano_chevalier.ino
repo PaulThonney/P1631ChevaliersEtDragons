@@ -1,7 +1,7 @@
 /* Code de l'Arduino gérant l'intelligence centrale du Minotaure
   Son but est de récolter toutes les informations des capteurs et de prendre des décisions en conséquence
   @author: Dany VALADO (2018) Lucien PRUVOT Paul THONNEY
-  DATE: 28.05.19
+  DATE: 30.06.19
   REMERCIEMENTS: Merci à Maxime SCHARWATH, Joan MAILLARD et Léonard BESSEAU pour leur aide
 */
 
@@ -38,8 +38,6 @@
 #define MAX_SPEED 0
 #define COOLDOWN 1
 
-unsigned long timeStartAt;
-
 bool ButtonA(bool flanc = false);
 bool ButtonB(bool flanc = false);
 bool ButtonX(bool flanc = false);
@@ -56,8 +54,9 @@ bool ButtonSTART(bool flanc = false);
 bool ButtonSELECT(bool flanc = false);
 bool flancsMontants[14];
 
-byte modules[5] =  {ADDR_TRACKING, ADDR_CONTACT, ADDR_SOUND, ADDR_WHEEL, ADDR_EYES};
 bool stateModules[5];
+
+byte modules[5] =  {ADDR_TRACKING, ADDR_CONTACT, ADDR_SOUND, ADDR_WHEEL, ADDR_EYES};
 
 byte dataBuffer[BUFFER_SIZE];
 byte controllerOutput = 0;
@@ -81,20 +80,24 @@ State savedMode = State::Manuel;
 State currentState = State::MenuSelection; // On démarre sur le menu de sélection
 State previousState; // Ancien état
 
-bool isStartedState = false;
-
-int stateMenuPos = 0; // Position du curseur
+unsigned long timeStartAt;
 unsigned long lastContactAt = 0;
 unsigned long askResponseAt = 0;
 unsigned long lastPingAt = 0;
-bool waitingResponse = false;
 unsigned long nbRequest;
 unsigned long nbTransmission;
+unsigned long lastAmbiantAt = 0;
 long loopTime;
+
+bool isStartedState = false;
+
+bool waitingResponse = false;
 
 bool sendEyes(int id, int data = -1);
 bool sendSound(int id, int data = -1);
 bool sendContact(int id, int data = -1, int duration = -1);
+
+int stateMenuPos = 0; // Position du curseur
 
 // maxSpeed[%] - hurtCooldown[ms]
 int difficulty[][2] = {
@@ -102,7 +105,7 @@ int difficulty[][2] = {
   {50, 2500},//medium
   {70, 1000}//hard
 };
-int currentDifficulty = MEDIUM;
+int currentDifficulty = MEDIUM; // On défini la difficulté ici (le menu de selection n'est pas implémenté)
 
 int getDifficulty(int id) {
   return difficulty[currentDifficulty][id];
@@ -128,15 +131,21 @@ void setup() {
   //Serial.println("Setup completed");
   delay(1000);
   pingModules();
-  setupRobot();
+  setupRobot(); // on setup le robot une première fois
   sendSound(0, 0);// Starting sound
 }
 
+
+/*
+   @func void loop Est la boucle centrale du code c'est elle qui appelle les fonctions principales
+   @param null
+   @return void
+*/
 void loop() {
   timeStartAt = millis();
   communicationController(); // On commence par communiquer les dernières infos avec la manette
-  pingModules();
-  loopAmbiant();
+  pingModules(); // On ping les modules pour voir lesquels répondent
+  loopAmbiant(); // On execute le loopAmbiant pour jouer des sons et des animations sur les yeux
   if (millis() > askResponseAt + 25) {
     askResponseAt = 0;
     waitingResponse = false;
@@ -171,11 +180,17 @@ void loop() {
         break;
       }
   }
-  loopTime = millis() - timeStartAt;
+  loopTime = millis() - timeStartAt; // On mesure combien de temps le loop a pris pour s'executes en entier
 
-  logs();
+  //logs(); // On affiche les logs dans le seriel
 }
 
+/*
+   @func void setupRobot Est appelée pour setup les robot une première fois ou pour les remettres à zéro
+   après une mort ou un retour au menu principal de sélection
+   @param null
+   @return void
+*/
 void setupRobot() {
   currentLife = MAX_LIFE;
   hurtCooldown = 0;
@@ -185,6 +200,11 @@ void setupRobot() {
   sendSound(250);//StopSound
 }
 
+/*
+   @func int boostSpeed Fonction qui attribue un boost en vitesse le temps du cooldown après avoir pris un coup
+   @param null
+   @return percent
+*/
 int boostSpeed() {
   int percent = 0;
   if (isCooldown()) {
@@ -193,16 +213,31 @@ int boostSpeed() {
   return percent;
 }
 
+/*
+   @func void resumeGame Fonction qui stop la pause des yeux, le son et remet les contacts en mode jeu
+   @param null
+   @return void
+*/
 void resumeGame() {
   sendEyes(0);
   sendContact(CONTACT_DEFAULT_MODE);
   sendSound(250);//StopSound
 }
 
+/*
+   @func bool vérifie si l'on est en cooldown ou pas
+   @param null
+   @return bool
+*/
 bool isCooldown() {
   return (millis() < hurtCooldown);
 }
 
+/*
+   @func bool hurt Execute les actions liées au fait de prendre un coup (affichage, mort, point de vie, communication avec les yeux et le son)
+   @param int dmg
+   @return bool
+*/
 bool hurt(int dmg) {
   if (dmg <= 0)return false;
   //Serial.println("Cooldown:" + String(isCooldown()));
@@ -231,17 +266,31 @@ bool hurt(int dmg) {
   return true;
 }
 
+/*
+   @func void die envoie les information d'affichage et de son lors d'une mort
+   @param null
+   @return void
+*/
 void die() {
   sendEyes(3);//eyeDead
   sendSound(3);//soundDead
   sendContact(4);//animDead
 }
 
+/*
+   @func bool isDead Répond oui si le robot est mort (sa vie est plus petite ou égale à 0)
+   @param null
+   @return bool
+*/
 bool isDead() {
   return (currentLife <= 0);
 }
 
-
+/*
+   @func void Boucle qui vérifie les dégats pris en appelant l'arduino des contact et execute la fonction hurt() en conséquence
+   @param null
+   @return void
+*/
 void loopHurt() {
   if (millis() <= lastContactAt + 250) {
     return;
@@ -252,7 +301,7 @@ void loopHurt() {
     if ((bool)buffer[0] == true) {
       int dmg = 0;
       // Serial.println("Which Contact:" + String(buffer[1]));
-      switch (buffer[1]) {
+      switch (buffer[1]) { // On peut si on veut modifier le nombre de dégat pris selon les plaques touchées
         case 0: dmg = 1; break;
         case 1: dmg = 1; break;
         case 2: dmg = 1; break;
@@ -265,6 +314,12 @@ void loopHurt() {
   }
 }
 
+/*
+   @func void pingModule Fonction qui ping les différents modules arduino pour vérifier leur état de connection
+   Elle stocke ensuite l'état des modules dans stateModules
+   @param null
+   @return void
+*/
 void pingModules() {
   if (millis() <= lastPingAt + 500) {
     return;
@@ -280,6 +335,11 @@ void pingModules() {
   }
 }
 
+/*
+   @func bool Ping le module à l'adresse demandée et retourne si elle a reçuu réponse
+   @param int addr adresse du module à pinger
+   @return bool
+*/
 bool pingAddr(int addr) {
   // if (waitingResponse)return false;
   nbTransmission++;
@@ -287,6 +347,13 @@ bool pingAddr(int addr) {
   return Wire.endTransmission() == 0;
 }
 
+/*
+   @func bool getData demande au module demandé de lui transmettre son data et le stocke dans un buffer
+   @param in addr adresse du module demandé
+   #param byte *buffer pour y ranger le data
+   #param int nbBytes nombre de bytes attendu lors de la transmission
+   @return bool
+*/
 bool getData(int addr, byte *buffer, int nbBytes) {
   if (waitingResponse)return false;
   if (!pingAddr(addr))return false;
@@ -306,6 +373,13 @@ bool getData(int addr, byte *buffer, int nbBytes) {
   return false;
 }
 
+/*
+   @func bool sendData envoie du data au module demandé
+   @param int addr adresse du module demandé
+   #param byte buffer Stockage de l'info à envoyer
+   #param int nbBytes nombre de bytes à envoyer
+   @return bool
+*/
 bool sendData(int addr, byte *buffer, int nbBytes) {
   if (waitingResponse)return false;
   nbTransmission++;
@@ -316,7 +390,11 @@ bool sendData(int addr, byte *buffer, int nbBytes) {
   return Wire.endTransmission() == 1;
 }
 
-unsigned long lastAmbiantAt = 0;
+/*
+  @func void loopAmbiant Joue des sons et des animations des yeux pour donner une ambiance
+  @param null
+  @return bool
+*/
 void loopAmbiant() {
   if (isDead())return;
   if (IS_MINOTAURE) {
@@ -328,35 +406,48 @@ void loopAmbiant() {
   }
 }
 
+/*
+  @func void loopDisconnected Suivant l'état de la manette (connectée/déconnectée) cette fonction
+  coupe les moteurs et envoie les info d'affichage et de son
+  @param null
+  @return void
+*/
 void loopDisconnected() {
   if (onStartState()) {
     sendEyes(7);
-    sendMotorValue(0, 0);
+    sendMotorValue(0, 0); // coupe les moteurs par sécurité lors d'une déconnexion de manette
     sendMotorValue(1, 0);
     sendSound(0, 4);
     sendContact(4);
   }
   if (InfoController() == CONNECTED) {
-    setState(State::MenuGO);
+    setState(State::MenuSelection); // si la manette est à nouveau connectée on va au menu de selection
     sendEyes(8);
     sendSound(0, 5);
     sendContact(CONTACT_DEFAULT_MODE);
   }
 }
-
+/*
+  @func int getSpeed applique le boost de vitesse éventuel et renvoie la vitesse transformée
+  @param int speed On lui transmet la vitesse demandée
+  @return int vitesse transformée ou non par le boost
+*/
 int getSpeed(int speed) {
   return ((100 + boostSpeed()) * speed) / 100.0;
 }
 
 /*
-   Fonction qui gère le mode automatique des robots
-   Pour le moment elle récupère uniquement l'angle du servo et le transmet aux roues.
+  @func void loopAutomatique gère le mode automatique du robot.
+  récupère les informations transmisent par le module de tracking et les traite pour ensuite donner des ordres de
+  vitesse et de direction aux roues. Gère aussi l'appel de loopHurt() pour gèrer les dégats.
+  @param null
+  @return void
 */
 void loopAutomatique() {
   if (onStartState()) {//Seulement la première fois qu'il rentre dans la loop
     sendTracking(0x1E);
     if (memOutput != 4) {
-      controllerOutput = 4 ;
+      controllerOutput = 4 ; // affiche le mode de jeu avec vie pleine
     } else {
       controllerOutput = memOutput ;
     }
@@ -366,14 +457,15 @@ void loopAutomatique() {
     return;
   }
 
-  loopHurt();
+  loopHurt(); // appelle la gestion des dégats
 
+  //vérifie si le robot est mort ou pas
   if (isDead()) {
 
     sendMotorValue(0, 0);
     sendMotorValue(1, 0);
-    setState(State::MenuSelection);
-    setupRobot();
+    setState(State::MenuSelection); // retourne au menu de selection de mode de jeu
+    setupRobot(); // setup le robot à sa mort pour remettre tous les paramètres de jeu à 0
     return;
   }
 
@@ -391,45 +483,73 @@ void loopAutomatique() {
     //sendEyes(5, (3 << 3) | map(headAngle, -90, 90, 0, 5));
   }
 
-  short speedL = 0;
-  short speedR = 0;
+  /* //Je n'ai pas eu le temps de comprendre pourquoi ce système de tracking ne fonctionne pas il semble que
+     //le minotaure perd l'information de isFindTarget. Je laisse donc ce bout de code ici pour les futures générations sur le projet.
 
-  if (isFindTarget) {
-    if (headAngle >= 10) {
-      speedR = getSpeed(map(abs(headAngle), 0, 90, getDifficulty(MAX_SPEED), 0));
-      speedL = getSpeed(getDifficulty(MAX_SPEED));
+    short speedL = 0;
+    short speedR = 0;
+
+    //28.06.19 18h56 and 28.06.19 19h42
+    if (isFindTarget) {
+      if (headAngle >= 10) {
+        speedR = getSpeed(map(abs(headAngle), 0, 90, getDifficulty(MAX_SPEED), 0));
+        speedL = getSpeed(getDifficulty(MAX_SPEED));
+      }
+      else if (headAngle <= -10) {
+        speedR = getSpeed(getDifficulty(MAX_SPEED));
+        speedL = getSpeed(map(abs(headAngle), 0, 90, getDifficulty(MAX_SPEED), 0 ));
+      }
+      else if (-10 < headAngle && headAngle < 10) {
+        speedR =  getSpeed(getDifficulty(MAX_SPEED));
+        speedL = getSpeed(getDifficulty(MAX_SPEED));
+      }
+
+      //Envoie les infos au moteur
+      sendMotorValue(1, -speedL);
+      sendMotorValue(0, -speedR);
     }
-    else if (headAngle <= -10) {
-      speedR = getSpeed(getDifficulty(MAX_SPEED));
-      speedL = getSpeed(map(abs(headAngle), 0, 90, getDifficulty(MAX_SPEED), 0 ));
-    }
-    else if (-10 < headAngle && headAngle < 10) {
-      speedR = getSpeed(getDifficulty(MAX_SPEED));
-      speedL = getSpeed(getDifficulty(MAX_SPEED));
+    else {
+      short speed = getSpeed(map(abs(headAngle), 0, 90, 0 , getDifficulty(MAX_SPEED) / 1.25));
+      if (headAngle < 0) {
+        sendMotorValue(0, -speed);
+        sendMotorValue(1, speed);
+      } else {
+        sendMotorValue(0, speed);
+        sendMotorValue(1, -speed);
+      }
+    }*/
+  //29.06.19 15h04 Cet algorithme est un bricolage créé pour la présentation finale car celui que l'on voulait utiliser (ci-dessus) 
+  //ne fonctionne pas et nous n'avons pas eu le temps de comprendre pourquoi...
+  if (headAngle > -30 && headAngle < 30) { // si la cible est "en face" et qu'il est en train de la tracker il fonce
+    if (isFindTarget) {
+      int speed = getSpeed(map(targetDistance, 0, 255, 20, getDifficulty(MAX_SPEED) * 1.25));
+      sendMotorValue(0, -speed); // les moteurs sont monté à l'envers sur le minotaure
+      sendMotorValue(1, -speed);
     }
 
-    //Envoie les infos au moteur
-    sendMotorValue(0, speedL);
-    sendMotorValue(1, speedR);
-  }
-  else {
-    short speed = getSpeed(map(abs(headAngle), 0, 90, 0 , getDifficulty(MAX_SPEED) / 1.25));
-    if (headAngle < 0) {
+  } else { // tourne doucement sur lui même pour trouver une cible
+    int speed = getSpeed(map(abs(headAngle), 0, 90, 0, getDifficulty(MAX_SPEED) / 1.25));
+    if (headAngle < -10) {
       sendMotorValue(0, -speed);
       sendMotorValue(1, speed);
-    } else {
+    } else if (headAngle > 10) {
       sendMotorValue(0, speed);
       sendMotorValue(1, -speed);
+    } else {
+      sendMotorValue(0, 0);
+      sendMotorValue(1, 0);
     }
   }
 }
 
 /*
-   Fonction qui gère le mode manuel des robots
-   Elle transmet la position des joysticks a l'arduino des roues
+  @func void loopManuel Fonction qui gère le mode manuel du robot
+  Elle utilise les infos transmises par le joystick de la manette pour les transmettre ensuite aux roues.
+  @param null
+  @return void
 */
 void loopManuel() {
-  if (onStartState()) {//Seulement la première fois qu'il rentre dans la loop
+  if (onStartState()) { //Seulement la première fois qu'il rentre dans la loop
     sendTracking(0x2E);
     if (memOutput != 10) {
       controllerOutput = 10 ;
@@ -455,8 +575,8 @@ void loopManuel() {
   }
 
   //Récupère les infos
-  int jX = (JoystickValue(AxisLX()) * 100);
-  int jY =  (JoystickValue(AxisLY()) * 100);
+  int jX = (joystickValue(AxisLX()) * 100);
+  int jY =  (joystickValue(AxisLY()) * 100);
 
   //Viteese des roues (De base à l'arrêt)
   short speedL = 0;
@@ -465,7 +585,7 @@ void loopManuel() {
   // Sens du moteur
   bool forward = true;
 
-  if (jY > 10) {
+  if (jY > 10) { // ajout volontaire de "deadzone" pour rendre les transitions entre avant et arrière plus douces.
     if (jX < -30) {
       speedR = 100 + jX;
       speedL = -jX;
@@ -500,7 +620,7 @@ void loopManuel() {
     }
   }
 
-
+  // bloque les vitesses sur vitesseMAX pour éviter une vitesse trop grande
   short vitesseMax =  getDifficulty(MAX_SPEED);
   if (speedL > vitesseMax) {
     speedL = vitesseMax;
@@ -520,6 +640,12 @@ void loopManuel() {
   sendMotorValue(1, speedR);
 }
 
+/*
+  @func bool sendSound envoie l'information demandée au module de son
+  @param int id du module demandé
+  #param int data
+  @return bool
+*/
 bool sendSound(int id, int data) {
   if (waitingResponse || !stateModules[2])return false;
   if (!stateModules[2])return false;
@@ -533,6 +659,13 @@ bool sendSound(int id, int data) {
 
 }
 
+/*
+  @func bool sendContact envoie l'information demandée au module des contacts
+  @param int id du module demandé
+  #param int data
+  #param int duration
+  @return bool
+*/
 bool sendContact(int id, int data, int duration) {
   if (waitingResponse || !stateModules[1])return false;
   if (!stateModules[1])return false;
@@ -549,6 +682,11 @@ bool sendContact(int id, int data, int duration) {
 
 }
 
+/*
+  @func bool sendTracking envoie l'information demandée au module de tracking
+  #param int id du module demandé
+  @return bool
+*/
 bool sendTracking(int id) {
   if (waitingResponse || !stateModules[0])return false;
   if (!stateModules[0])return false;
@@ -556,9 +694,14 @@ bool sendTracking(int id) {
   Wire.beginTransmission(ADDR_TRACKING);
   Wire.write(id);
   return Wire.endTransmission() == 1;
-
 }
 
+/*
+  @func bool sendEyes envoie l'information demandée au module des yeux
+  @param int id du module demandé
+  #param int data
+  @return bool
+*/
 bool sendEyes(int id, int data) {
   if (waitingResponse || !stateModules[4])return false;
   if (!stateModules[4])return false;
@@ -571,6 +714,12 @@ bool sendEyes(int id, int data) {
   return Wire.endTransmission() == 1;
 }
 
+/*
+  @func bool sendMotorValue envoie l'information demandée au module des roues
+  @param int id du module demandé
+  #param int value
+  @return bool
+*/
 bool sendMotorValue(byte id, int value) {
   if (waitingResponse || !stateModules[3])return false;
   if (currentMotorValue[id] == value)return true; //évite de faire une comm si rien n'a changé
@@ -622,7 +771,11 @@ State setState(State state, int menuPos) {
   currentState = state;
   return currentState;
 }
-
+/*
+  @func bool onStartState vérifie si l'on execute pour la première fois une action
+  @param null
+  @return bool
+*/
 bool onStartState() {
   if (!isStartedState) {
     isStartedState = true;
@@ -740,7 +893,11 @@ void  loopMenuSelection() {
     setState(State::MenuGO);
   }
 }
-
+/*
+  @func void loopDifficulty Menu de choix de la difficulté
+  @param null
+  @return void
+*/
 void loopDifficulty() {
   if (onStartState()) {
   }
@@ -751,7 +908,7 @@ void loopDifficulty() {
   switch (pos) {
     default:
     case 0:
-      controllerOutput = 1;
+      controllerOutput = 1; // nbr arbitraire car non implémenté par le groupe manette...
       diffTemp = EASY;
       break;
     case 1:
@@ -774,8 +931,11 @@ void loopDifficulty() {
   }
 }
 
-//LOGS
-
+/*
+  @func void logs Print dans la console les infos ci-dessous (utilisé pour le debug)
+  @param null
+  @return void
+*/
 void logs() {
   if (millis() < lastLogAt + LOGS_DELAY) {
     return;
@@ -803,17 +963,23 @@ void logs() {
   */
 }
 
-
-//CONTROLLER
-
-
-float JoystickValue(byte v) {
+/*
+  @func float joystickValue calcule la valeure du joystick en prenant en compte la marge
+  @param byte v
+  @return float tmp
+*/
+float joystickValue(byte v) {
   float tmp = mapfloat(v, 0, 255, 1, -1);
   if (tmp >= -JOYSTICK_MARGIN && tmp <= JOYSTICK_MARGIN)tmp = 0;
   return tmp;
 }
 
-float TriggerValue(byte v) {
+/*
+  @func float triggerValue transforme les infos de joystick entre 0 et 1 (non utilisée)
+  @param byte v
+  @return float tmp
+*/
+float triggerValue(byte v) {
   float tmp = mapfloat(v, 0, 255, 0, 1);
   return tmp;
 }
@@ -835,6 +1001,7 @@ byte InfoController() {
 byte AxisLX() {
   return dataBuffer[4];
 }
+
 /*
    @func byte AxisLY retourne la valeure de l'axe Y du joystick gauche
    @param null
@@ -843,6 +1010,7 @@ byte AxisLX() {
 byte AxisLY() {
   return dataBuffer[5];
 }
+
 /*
    @func byte AxisRX retourne la valeure de l'axe X du joystick droite
    @param null
@@ -851,6 +1019,7 @@ byte AxisLY() {
 byte AxisRX() {
   return dataBuffer[6];
 }
+
 /*
    @func byte AxisRY retourne la valeure de l'axe Y du joystick droite
    @param null
@@ -859,6 +1028,7 @@ byte AxisRX() {
 byte AxisRY() {
   return dataBuffer[7];
 }
+
 /*
    @func byte AxisLT retourne la valeure de la gachette droite
    @param null
@@ -867,6 +1037,7 @@ byte AxisRY() {
 byte AxisLT() {
   return dataBuffer[2];
 }
+
 /*
    @func byte AxisRT retourne la valeure de la gachette Gauche
    @param null
@@ -875,6 +1046,7 @@ byte AxisLT() {
 byte AxisRT() {
   return dataBuffer[3];
 }
+
 /*
    @func bool ButtonA retourne la valeure du boutton A
    @param null
@@ -885,6 +1057,7 @@ bool ButtonA(bool flanc) {
   if (flanc)v = ButtonFlanc(v, 0);
   return v;
 }
+
 /*
    @func bool ButtonB retourne la valeure du boutton B
    @param null
@@ -895,6 +1068,7 @@ bool ButtonB(bool flanc) {
   if (flanc)v = ButtonFlanc(v, 1);
   return v;
 }
+
 /*
    @func bool ButtonX retourne la valeure du boutton X
    @param null
@@ -905,6 +1079,7 @@ bool ButtonX(bool flanc) {
   if (flanc)v = ButtonFlanc(v, 2);
   return v;
 }
+
 /*
    @func bool ButtonY retourne la valeure du boutton Y
    @param null
@@ -915,6 +1090,7 @@ bool ButtonY(bool flanc) {
   if (flanc)v = ButtonFlanc(v, 3);
   return v;
 }
+
 /*
    @func bool ButtonWEST retourne la valeure du boutton WEST
    @param null
@@ -925,6 +1101,7 @@ bool ButtonWEST(bool flanc) {
   if (flanc)v = ButtonFlanc(v, 4);
   return v;
 }
+
 /*
    @func bool ButtonEAST retourne la valeure du boutton EAST
    @param null
@@ -935,6 +1112,7 @@ bool ButtonEAST(bool flanc) {
   if (flanc)v = ButtonFlanc(v, 5);
   return v;
 }
+
 /*
    @func bool ButtonNORTH retourne la valeure du boutton NORTH
    @param null
@@ -945,6 +1123,7 @@ bool ButtonNORTH(bool flanc) {
   if (flanc)v = ButtonFlanc(v, 6);
   return v;
 }
+
 /*
    @func bool ButtonSOUTH retourne la valeure du boutton SOUTH
    @param null
@@ -955,6 +1134,7 @@ bool ButtonSOUTH(bool flanc) {
   if (flanc)v = ButtonFlanc(v, 7);
   return v;
 }
+
 /*
    @func bool ButtonLB retourne la valeure du boutton LB
    @param null
@@ -965,6 +1145,7 @@ bool ButtonLB(bool flanc) {
   if (flanc)v = ButtonFlanc(v, 8);
   return v;
 }
+
 /*
    @func bool ButtonRB retourne la valeure du boutton RB
    @param null
@@ -975,6 +1156,7 @@ bool ButtonRB(bool flanc) {
   if (flanc)v = ButtonFlanc(v, 9);
   return v;
 }
+
 /*
    @func bool ButtonLS retourne la valeure du boutton LS
    @param null
@@ -985,6 +1167,7 @@ bool ButtonLS(bool flanc) {
   if (flanc)v = ButtonFlanc(v, 10);
   return v;
 }
+
 /*
    @func bool ButtonRS retourne la valeure du boutton RS
    @param null
@@ -995,6 +1178,7 @@ bool ButtonRS(bool flanc) {
   if (flanc)v = ButtonFlanc(v, 11);
   return v;
 }
+
 /*
    @func bool ButtonSTART retourne la valeure du boutton START
    @param null
@@ -1005,6 +1189,7 @@ bool ButtonSTART(bool flanc) {
   if (flanc)v = ButtonFlanc(v, 12);
   return v;
 }
+
 /*
    @func bool ButtonSELECT retourne la valeure du boutton SELECT
    @param null
@@ -1015,6 +1200,7 @@ bool ButtonSELECT(bool flanc) {
   if (flanc)v = ButtonFlanc(v, 13);
   return v;
 }
+
 /*
    @func bool ButtonFlanc Permet de détecter les flancs montants des boutons dans une seule fonction
    @param bool button
@@ -1030,10 +1216,24 @@ bool ButtonFlanc(bool button, byte flancId) {
   return temp;
 }
 
+/*
+  @func float jmapfloat Comme son nom l'indique c'est une fonction map mais qui comprends les floats
+  @param float x 
+  #param float in_min
+  #param float in_max
+  #param float out_min
+  #param float out_max
+  @return float la valeure mapée en float
+*/
 float mapfloat(float x, float in_min, float in_max, float out_min, float out_max) {
   return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
 
+/*
+  @func String toHex donne l'adresse du module en hexadécimal
+  @param int num id en décimal du module
+  @return string buffer valeure en hexa de l'adresse du module
+*/
 String toHex(int num) {
   char buffer[10];
   sprintf(buffer, "%x", num);
